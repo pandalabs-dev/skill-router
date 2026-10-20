@@ -332,6 +332,48 @@ class V040RuleTests(unittest.TestCase):
                 self.assertEqual(names_in(suggest(p)), ["image-to-code"])
 
 
+class DeepModeTests(unittest.TestCase):
+    TRIG = route.DEFAULTS["deep_triggers"]
+
+    def test_triggers(self):
+        for p in ["fix the flaky test, use necessary skills", "Use Relevant Skills: write a sitemap",
+                  "+skills convert this screenshot to html", "find skills for this: audit the contract"]:
+            with self.subTest(p=p):
+                task = route.deep_trigger(p, self.TRIG)
+                self.assertIsNotNone(task)
+                self.assertNotIn("skills", task.lower())
+
+    def test_negations_and_questions(self):
+        for p in ["don't use skills, just answer", "do not use skills for this", "answer without skills",
+                  "no skills needed, quick question", "never use skills here", "what skills do I have",
+                  "which skills are installed?", "list my skills", "add error handling to the fetch call"]:
+            with self.subTest(p=p):
+                self.assertIsNone(route.deep_trigger(p, self.TRIG))
+
+    def test_deep_output(self):
+        text = suggest("tell me a joke about cats, use relevant skills")
+        self.assertIn("no installed skill clearly matches", text)
+        if "sql-pro" in NAMES:
+            text = suggest("full table scan is slow, use relevant skills")
+            self.assertIn("Skill tool", text)
+            self.assertIn("sql-pro", text)
+            self.assertLessEqual(len(text), 700)
+        self.assertIsNone(suggest("don't use skills, just tell me a joke about cats"))
+
+    def test_deep_latency(self):
+        env = dict(os.environ, SKILL_ROUTER_DATA=TMP)
+        times = []
+        for i in range(3):
+            t0 = time.time()
+            subprocess.run([sys.executable, os.path.join(SCRIPTS, "route.py")],
+                           input=json.dumps({"prompt": "make the hero section feel minimal and calm, use necessary skills",
+                                             "cwd": CWD, "session_id": "deep-lat-%d" % i}),
+                           capture_output=True, text=True, env=env, timeout=10)
+            times.append((time.time() - t0) * 1000)
+        sys.stderr.write("\n[deep latency] ms: %s\n" % ", ".join("%.0f" % t for t in times))
+        self.assertLess(sorted(times)[1], 300)
+
+
 class ParserTests(unittest.TestCase):
     def test_frontmatter_variants(self):
         cases = {

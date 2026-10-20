@@ -33,6 +33,10 @@ DEFAULTS = {
     "opt_in_families": {"caveman": {"skills": ["caveman*", "cavecrew*"],
                                     "words": ["caveman", "cavecrew", "terse", "compress", "compressed",
                                               "fewer tokens", "less tokens", "token-efficient"]}},
+    # phrases that switch on deep mode for one prompt (case-insensitive, anywhere)
+    "deep_triggers": ["use necessary skills", "use the necessary skills", "use relevant skills",
+                      "use the relevant skills", "use any relevant skills", "use skills", "use my skills",
+                      "use the right skills", "use your skills", "find skills for this", "+skills"],
     "debug": False,
 }
 HARD_MAX_K = 5
@@ -124,6 +128,25 @@ def load_index(ddir):
 def prompt_size(prompt):
     """Number of meaningful words (filler removed)."""
     return len([w for w in re.findall(r"[A-Za-z0-9][\w.+#-]*", prompt.lower()) if w not in FILLER])
+
+
+_NEGATION = re.compile(r"(?:\bdon'?t|\bdo not|\bnever|\bno need to|\bwithout|\bnot|\bno)\W+(?:\w+\W+){0,2}$", re.I)
+
+
+def deep_trigger(prompt, triggers):
+    """Return the task text with the trigger phrase removed when the prompt asks for
+    deep mode, else None. Negated phrases ('don't use skills') do not trigger."""
+    low = prompt.lower()
+    for trig in sorted(triggers or (), key=len, reverse=True):
+        t = trig.lower().strip()
+        if not t:
+            continue
+        for m in re.finditer(r"(?<![\w+])" + re.escape(t) + r"(?!\w)", low):
+            if _NEGATION.search(low[:m.start()]):
+                continue
+            task = (prompt[:m.start()] + " " + prompt[m.end():]).strip(" ,.;:!?-")
+            return re.sub(r"\s+", " ", task)
+    return None
 
 
 def should_skip(prompt):
@@ -675,9 +698,18 @@ def run(payload, ddir=None, persist=True):
     """Return the additionalContext string or None."""
     ddir = ddir or srlib.data_dir()
     prompt = payload.get("prompt") or ""
-    if not isinstance(prompt, str) or should_skip(prompt):
+    if not isinstance(prompt, str):
         return None
     cfg = load_config(ddir)
+    task = None
+    if prompt.strip()[:1] not in ("/", "!", "#"):
+        task = deep_trigger(prompt, cfg.get("deep_triggers"))
+    if task is not None:
+        if prompt_size(task) < 1:
+            return None
+        return run_deep(task, payload, cfg, ddir, persist)
+    if should_skip(prompt):
+        return None
     idx = load_index(ddir)
     cwd = payload.get("cwd") or ""
     routes = load_json(os.path.join(os.path.dirname(HERE), "routes.json"), {}) or {}
@@ -715,6 +747,42 @@ def run(payload, ddir=None, persist=True):
             os.replace(tmp, sp)
             if chosen and int(time.time()) % 20 == 0:
                 prune_states(ddir)
+        except OSError:
+            pass
+    return text
+
+
+def run_deep(task, payload, cfg, ddir, persist):
+    """Explicitly requested deep search (see deep.py)."""
+    import deep
+    idx = load_index(ddir)
+    task = deep.fix_typos(task, idx["idf"])
+    cwd = payload.get("cwd") or ""
+    routes = load_json(os.path.join(os.path.dirname(HERE), "routes.json"), {}) or {}
+    ALTERNATIVES[:] = [set(a) for a in routes.get("alternatives", [])]
+    signals, project_plats = project_signals(cwd, routes)
+    rtask = srlib.rewrite(task)
+    qraw = set(srlib.raw_tokens(rtask))
+    prompt_plats = prompt_platforms(qraw, rtask.lower(), routes)
+    platforms = resolve_platforms(project_plats, prompt_plats, routes)
+    muted = muted_names(idx["skills"], prompt_plats, routes, cfg, rtask.lower(), qraw)
+    extra = [s for s in project_skills(cwd) if s["name"] not in {x["name"] for x in idx["skills"]}]
+    state = {}
+    sp = state_path(ddir, payload.get("session_id"))
+    if persist:
+        state = load_json(sp, {}) or {}
+        scan_transcript(payload.get("transcript_path"), state)
+    q = Query(task, idx)
+    results = score_all(task, idx, signals, extra, platforms, muted, q)
+    # relaxed: platform-gated and wrong-direction candidates stay in the pool, scored lower
+    results = [r for r in results if r[1]["name"] not in cfg["exclude"]]
+    text = deep.deep_hint(task, results, idx, set(state.get("used", [])), q)
+    if persist:
+        try:
+            os.makedirs(os.path.dirname(sp), exist_ok=True)
+            with open(sp + ".tmp", "w") as f:
+                json.dump(state, f)
+            os.replace(sp + ".tmp", sp)
         except OSError:
             pass
     return text

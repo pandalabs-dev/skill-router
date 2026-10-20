@@ -153,6 +153,31 @@ def metrics(h, data=None):
     return out
 
 
+def deep_metrics(h, data=None):
+    """Deep mode vs normal mode on the same task text."""
+    data = data or load_set()
+    out = {"n": 0, "deep_hit": 0, "normal_hit": 0, "nomatch_ok": 0, "nomatch_n": 0, "chars": [], "misses": []}
+    for it in data.get("deep", []):
+        prompt = "%s, %s" % (it["task"], it["trigger"]) if not it["trigger"].startswith("+") else "%s %s" % (it["trigger"], it["task"])
+        text = route.run({"prompt": prompt, "cwd": h.dirs["plain"], "session_id": "deep"}, ddir=h.ddir, persist=False) or ""
+        out["chars"].append(len(text))
+        names = [l[2:].split(": ", 1)[0].split(" (", 1)[0] for l in text.splitlines() if l.startswith("- ")]
+        if not it["accept"]:
+            out["nomatch_n"] += 1
+            out["nomatch_ok"] += ("no installed skill clearly matches" in text)
+            continue
+        if not (set(it["accept"]) & h.names):
+            continue
+        out["n"] += 1
+        normal = h.suggest({"p": it["task"]})[1]
+        out["normal_hit"] += bool(set(it["accept"]) & set(normal))
+        hit = bool(set(it["accept"]) & set(names[:5]))
+        out["deep_hit"] += hit
+        if not hit:
+            out["misses"].append((prompt, names))
+    return out
+
+
 def latency_ms(h, prompts, runs=3):
     import subprocess
     env = dict(os.environ, SKILL_ROUTER_DATA=h.ddir)
@@ -192,6 +217,16 @@ def main():
         print("everyday n=%d fire=%.0f%% avg_chars=%.1f max_chars=%d" % (e["n"], e["fire"] * 100, e["avg_chars"], e["max_chars"]))
         print("all      n=%d avg_chars=%.1f max_chars=%d names_per_hint=%.2f" % (
             m["all"]["n"], m["all"]["avg_chars"], m["all"]["max_chars"], m["names_per_hint"]))
+        dm = deep_metrics(h)
+        print("deep     n=%d hit@5 deep=%.0f%% normal(same task)=%.0f%% no-match ok=%d/%d avg_chars=%.0f max_chars=%d" % (
+            dm["n"], 100.0 * dm["deep_hit"] / (dm["n"] or 1), 100.0 * dm["normal_hit"] / (dm["n"] or 1),
+            dm["nomatch_ok"], dm["nomatch_n"], sum(dm["chars"]) / float(len(dm["chars"]) or 1), max(dm["chars"] or [0])))
+        if "-v" in sys.argv:
+            for p, n in dm["misses"]:
+                print("DEEPMISS %s -> %s" % (p, n))
+        dmed, dmx = latency_ms(h, ["make the hero section feel minimal and calm, use necessary skills",
+                                   "full table scan is slow, use relevant skills"])
+        print("deep latency median=%.0f ms max=%.0f ms" % (dmed, dmx))
         med, mx = latency_ms(h, ["write a postgres migration adding an index", "the CI is red again"])
         print("latency  median=%.0f ms max=%.0f ms (%s)" % (med, mx, sys.executable))
         if "-v" in sys.argv:

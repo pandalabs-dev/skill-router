@@ -30,6 +30,10 @@ claude plugin marketplace remove skill-router   # uninstall also deletes the ind
 - Platform, language and style skills stay quiet unless the prompt or project shows them; everyday words in skill names don't count as evidence.
 - Extra names must add evidence of their own; otherwise only the best match is shown.
 
+## Deep mode
+
+Add "use necessary skills" (or "use relevant skills", "use my skills", "+skills") to a prompt and the router searches wider: about 30 candidates, re-ranked by reading each one's full SKILL.md. It then tells Claude to invoke the skills that fit, up to 5, or says that none match. It runs locally in about 0.1 s, only when asked; "don't use skills" never triggers it. Phrases are configurable as `deep_triggers`.
+
 ## Config
 
 Optional `~/.claude/plugins/data/skill-router-skill-router/config.json`, e.g. `{"top_k": 3, "exclude": ["some-skill"]}`. `python3 scripts/build_index.py --list` shows skills by category.

@@ -1,5 +1,5 @@
 {
-  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. class_dev / class_holdout_v4: miss-class variation sets (A common-word names, B security intent, C SEO intent, D same-category extras); pass = an accepted skill is suggested (if any listed), no 'forbid' skill appears, and at most 'max_names' names. class_holdout_v4 and class_neg_holdout_v4 were frozen before 0.4.0 tuning. holdout_v3/v2/v1 are earlier holdouts minus prompts moved to dev after tuning on them. silent items must produce no hint. class_neg_* are look-alikes that must not fire their class (A: a skill matched only through everyday words in its name; B: security skills; C: seo-* skills; D: image-to-code / image generation); other skills may still fire.",
+  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. class_dev / class_holdout_v4: miss-class variation sets (A common-word names, B security intent, C SEO intent, D same-category extras); pass = an accepted skill is suggested (if any listed), no 'forbid' skill appears, and at most 'max_names' names. class_holdout_v4 and class_neg_holdout_v4 were frozen before 0.4.0 tuning. holdout_v3/v2/v1 are earlier holdouts minus prompts moved to dev after tuning on them. silent items must produce no hint. class_neg_* are look-alikes that must not fire their class (A: a skill matched only through everyday words in its name; B: security skills; C: seo-* skills; D: image-to-code / image generation); other skills may still fire. deep: deep-mode prompts (task + trigger phrase); accept [] means the hint must say no installed skill matches.",
   "dev": [
     {
       "p": "add a new tab screen with expo router",
@@ -1860,5 +1860,249 @@
     "why is the dev server so slow",
     "add error handling to the fetch call",
     "list the open TODOs in the repo"
+  ],
+  "deep": [
+    {
+      "task": "make the hero section feel minimal and calm",
+      "trigger": "use necessary skills",
+      "accept": [
+        "minimalist-ui",
+        "design-taste-frontend",
+        "high-end-visual-design",
+        "frontend-design:frontend-design"
+      ]
+    },
+    {
+      "task": "full table scan is slow",
+      "trigger": "use relevant skills",
+      "accept": [
+        "sql-pro",
+        "postgres-pro",
+        "database-optimizer"
+      ]
+    },
+    {
+      "task": "convert screnshot to html",
+      "trigger": "+skills",
+      "accept": [
+        "image-to-code"
+      ]
+    },
+    {
+      "task": "how do we rank higher on Google for payment gateway",
+      "trigger": "use my skills",
+      "accept": [
+        "seo",
+        "seo-plan",
+        "seo-content",
+        "seo-cluster",
+        "seo-google"
+      ]
+    },
+    {
+      "task": "the login form gets hammered by bots trying passwords",
+      "trigger": "use relevant skills",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "task": "our pages vanished from google results",
+      "trigger": "use skills",
+      "accept": [
+        "seo-technical",
+        "seo-google",
+        "seo",
+        "seo-drift"
+      ]
+    },
+    {
+      "task": "make this look premium, like an expensive brand site",
+      "trigger": "use necessary skills",
+      "accept": [
+        "high-end-visual-design",
+        "design-taste-frontend",
+        "impeccable",
+        "stitch-design-taste"
+      ]
+    },
+    {
+      "task": "write tests for the cart reducer",
+      "trigger": "find skills for this",
+      "accept": [
+        "test-master",
+        "superpowers:test-driven-development"
+      ]
+    },
+    {
+      "task": "the app crashes on launch on android after the update",
+      "trigger": "Use Relevant Skills",
+      "accept": [
+        "superpowers:systematic-debugging",
+        "debugging-wizard",
+        "react-native-expert"
+      ]
+    },
+    {
+      "task": "deploy the docs site to vercel with a custom domain",
+      "trigger": "use relevant skills",
+      "accept": [
+        "vercel:deployments-cicd",
+        "vercel:deploy",
+        "vercel:vercel-cli"
+      ]
+    },
+    {
+      "task": "build a dashboard chart for weekly signups",
+      "trigger": "use skills",
+      "accept": [
+        "dataviz"
+      ]
+    },
+    {
+      "task": "refactor this god component into smaller pieces",
+      "trigger": "use necessary skills",
+      "accept": [
+        "safe-refactor",
+        "react-expert",
+        "simplify"
+      ]
+    },
+    {
+      "task": "make a slide deck about our Q3 results",
+      "trigger": "+skills",
+      "accept": [
+        "anthropic-skills:pptx",
+        "slides"
+      ]
+    },
+    {
+      "task": "write a Dockerfile and k8s deployment for the api",
+      "trigger": "use relevant skills",
+      "accept": [
+        "devops-engineer",
+        "kubernetes-specialist"
+      ]
+    },
+    {
+      "task": "review my PR before I merge it",
+      "trigger": "use my skills",
+      "accept": [
+        "code-reviewer",
+        "code-review",
+        "superpowers:requesting-code-review"
+      ]
+    },
+    {
+      "task": "add sign in with google to the next app",
+      "trigger": "use relevant skills",
+      "accept": [
+        "vercel:auth",
+        "nextjs-developer"
+      ]
+    },
+    {
+      "task": "generate an OG image for the blog",
+      "trigger": "use skills",
+      "accept": [
+        "seo-image-gen",
+        "higgsfield-generate"
+      ]
+    },
+    {
+      "task": "turn the figma file into react components",
+      "trigger": "use necessary skills",
+      "accept": [
+        "figma:figma-design-to-code"
+      ]
+    },
+    {
+      "task": "optimise teh slow postgress query",
+      "trigger": "use relevant skills",
+      "accept": [
+        "postgres-pro",
+        "sql-pro",
+        "database-optimizer"
+      ]
+    },
+    {
+      "task": "add strucured data for recipes",
+      "trigger": "+skills",
+      "accept": [
+        "seo-schema"
+      ]
+    },
+    {
+      "task": "build an mcp server for our crm",
+      "trigger": "use skills",
+      "accept": [
+        "mcp-developer"
+      ]
+    },
+    {
+      "task": "create a terraform plan for an s3 bucket",
+      "trigger": "use relevant skills",
+      "accept": [
+        "terraform-engineer"
+      ]
+    },
+    {
+      "task": "make the onboarding screens in expo with tabs",
+      "trigger": "use necessary skills",
+      "accept": [
+        "expo-router",
+        "expo-native-ui"
+      ]
+    },
+    {
+      "task": "write a cover letter as a word doc",
+      "trigger": "use my skills",
+      "accept": [
+        "anthropic-skills:docx"
+      ]
+    },
+    {
+      "task": "audit our smart contract",
+      "trigger": "use relevant skills",
+      "accept": [
+        "solidity-security"
+      ]
+    },
+    {
+      "task": "plan the architecture for a multi-tenant SaaS",
+      "trigger": "use skills",
+      "accept": [
+        "architecture-designer",
+        "microservices-architect",
+        "superpowers:writing-plans",
+        "superpowers:brainstorming"
+      ]
+    },
+    {
+      "task": "brainstorm names for the new feature",
+      "trigger": "use relevant skills",
+      "accept": [
+        "superpowers:brainstorming"
+      ]
+    },
+    {
+      "task": "keep my answers short and terse",
+      "trigger": "use skills",
+      "accept": [
+        "caveman"
+      ]
+    },
+    {
+      "task": "tell me a joke about cats",
+      "trigger": "use skills",
+      "accept": []
+    },
+    {
+      "task": "what's the weather like tomorrow",
+      "trigger": "use relevant skills",
+      "accept": []
+    }
   ]
 }
