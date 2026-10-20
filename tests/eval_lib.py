@@ -71,7 +71,7 @@ def parse_names(text):
 def metrics(h, data=None):
     data = data or load_set()
     out = {}
-    for split in ("dev", "holdout", "holdout_v1"):
+    for split in ("dev", "holdout", "holdout_v2", "holdout_v1"):
         items = [i for i in data.get(split, []) if set(i["accept"]) & h.names]
         top1 = hit = fired = 0
         misses = []
@@ -96,6 +96,9 @@ def metrics(h, data=None):
     out["everyday"] = {"n": len(ev), "fire": sum(1 for s in sizes if s) / float(len(ev)),
                        "avg_chars": sum(sizes) / float(len(ev)), "max_chars": max(sizes),
                        "fired": [(p, n) for p, (t, n) in zip(data["everyday"], ev) if n]}
+    fired_names = [len(h.suggest(i)[1]) for i in data["dev"] + data["holdout"] + [norm(p) for p in data["everyday"]]]
+    fired_names = [n for n in fired_names if n]
+    out["names_per_hint"] = sum(fired_names) / float(len(fired_names) or 1)
     allp = [norm(i) for i in data["dev"] + data["holdout"]] + [norm(s) for s in silent] + [norm(p) for p in data["everyday"]]
     allsizes = [len(h.suggest(i)[0]) for i in allp]
     out["all"] = {"n": len(allp), "avg_chars": sum(allsizes) / float(len(allp)), "max_chars": max(allsizes)}
@@ -121,14 +124,15 @@ def main():
     h = Harness()
     try:
         m = metrics(h)
-        splits = ("dev", "holdout", "holdout_v1") if "--holdout" in sys.argv else ("dev", "holdout_v1")
+        splits = ("dev", "holdout", "holdout_v2", "holdout_v1") if "--holdout" in sys.argv else ("dev", "holdout_v2", "holdout_v1")
         for split in splits:
             d = m[split]
             print("%-8s n=%d top1=%.0f%% hit@5=%.0f%% fired=%.0f%%" % (split, d["n"], d["top1"] * 100, d["hit5"] * 100, d["fired"] * 100))
         print("silent   n=%d false_fire=%.0f%% %s" % (m["silent"]["n"], m["silent"]["false_fire"] * 100, m["silent"]["fires"]))
         e = m["everyday"]
         print("everyday n=%d fire=%.0f%% avg_chars=%.1f max_chars=%d" % (e["n"], e["fire"] * 100, e["avg_chars"], e["max_chars"]))
-        print("all      n=%d avg_chars=%.1f max_chars=%d" % (m["all"]["n"], m["all"]["avg_chars"], m["all"]["max_chars"]))
+        print("all      n=%d avg_chars=%.1f max_chars=%d names_per_hint=%.2f" % (
+            m["all"]["n"], m["all"]["avg_chars"], m["all"]["max_chars"], m["names_per_hint"]))
         med, mx = latency_ms(h, ["write a postgres migration adding an index", "the CI is red again"])
         print("latency  median=%.0f ms max=%.0f ms (%s)" % (med, mx, sys.executable))
         if "-v" in sys.argv:

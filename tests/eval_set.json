@@ -1,5 +1,5 @@
 {
-  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. 'holdout' (v2) was frozen before the 0.2.1 tuning and must not be tuned against; 'holdout_v1' is the 0.2.0 holdout minus three prompts moved to dev. 'fixture' names a synthetic project dir (see eval_lib.FIXTURES).",
+  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. 'holdout' (v3) was frozen before the 0.3.0 tuning and must not be tuned against; 'holdout_v2' / 'holdout_v1' are earlier holdouts minus prompts moved to dev after tuning on them. 'fixture' names a synthetic project dir (see eval_lib.FIXTURES).",
   "dev": [
     {
       "p": "add a new tab screen with expo router",
@@ -370,9 +370,165 @@
       "accept": [
         "image-to-code"
       ]
+    },
+    {
+      "p": "store user uploads in Vercel Blob",
+      "accept": [
+        "vercel:vercel-storage"
+      ]
+    },
+    {
+      "p": "make a Word document with the meeting minutes",
+      "accept": [
+        "anthropic-skills:docx"
+      ]
     }
   ],
   "holdout": [
+    {
+      "p": "add a Vercel KV cache for session lookups",
+      "accept": [
+        "vercel:vercel-storage",
+        "vercel:runtime-cache"
+      ]
+    },
+    {
+      "p": "put the feature toggles in Edge Config on Vercel",
+      "accept": [
+        "vercel:vercel-storage",
+        "vercel:flags-sdk"
+      ]
+    },
+    {
+      "p": "export the quarterly numbers as an Excel sheet",
+      "accept": [
+        "anthropic-skills:xlsx"
+      ]
+    },
+    {
+      "p": "turn these notes into a PowerPoint deck for the board",
+      "accept": [
+        "anthropic-skills:pptx"
+      ]
+    },
+    {
+      "p": "merge these two PDFs and add page numbers",
+      "accept": [
+        "anthropic-skills:pdf"
+      ]
+    },
+    {
+      "p": "add a stack navigator with a modal screen in expo router",
+      "accept": [
+        "expo-router"
+      ]
+    },
+    {
+      "p": "convert this landing page design image into Tailwind markup",
+      "accept": [
+        "image-to-code",
+        "tailwind-design-system"
+      ]
+    },
+    {
+      "p": "add meta descriptions and alt text across the blog",
+      "accept": [
+        "seo-page",
+        "seo-content",
+        "seo-images",
+        "seo"
+      ]
+    },
+    {
+      "p": "write a GitHub Actions workflow that deploys to Fly on main",
+      "accept": [
+        "devops-engineer"
+      ]
+    },
+    {
+      "p": "add OpenTelemetry tracing to the API service",
+      "accept": [
+        "monitoring-expert",
+        "sre-engineer"
+      ]
+    },
+    {
+      "p": "write a Prometheus alert for high error rate",
+      "accept": [
+        "monitoring-expert",
+        "sre-engineer"
+      ]
+    },
+    {
+      "p": "harden this login endpoint against brute force attacks",
+      "accept": [
+        "secure-code-guardian",
+        "security-reviewer"
+      ]
+    },
+    {
+      "p": "write a GraphQL subscription for order status updates",
+      "accept": [
+        "graphql-architect"
+      ]
+    },
+    {
+      "p": "create a Rails migration and model for subscriptions",
+      "accept": [
+        "rails-expert"
+      ]
+    },
+    {
+      "p": "write a Spark job that aggregates clickstream events",
+      "accept": [
+        "spark-engineer"
+      ]
+    },
+    {
+      "p": "set up a design token pipeline from Figma variables",
+      "accept": [
+        "figma:figma-generate-library",
+        "design-system",
+        "figma:figma-use"
+      ]
+    },
+    {
+      "p": "write a prompt that makes the classifier output strict JSON",
+      "accept": [
+        "prompt-engineer",
+        "claude-api"
+      ]
+    },
+    {
+      "p": "add a Next.js middleware that redirects by country",
+      "accept": [
+        "vercel:routing-middleware",
+        "nextjs-developer",
+        "vercel:nextjs"
+      ]
+    },
+    {
+      "p": "profile the slow React list and stop the re-renders",
+      "accept": [
+        "react-expert",
+        "vercel:react-best-practices",
+        "vercel-react-best-practices"
+      ]
+    },
+    {
+      "p": "write a Laravel Livewire component for the cart",
+      "accept": [
+        "laravel-specialist"
+      ]
+    },
+    {
+      "p": "generate an animated 3D product spin video",
+      "accept": [
+        "higgsfield-generate"
+      ]
+    }
+  ],
+  "holdout_v2": [
     {
       "p": "port this Figma screen to a SwiftUI view",
       "accept": [
@@ -427,12 +583,6 @@
       "p": "add rate limiting to the Vercel firewall for the login route",
       "accept": [
         "vercel:vercel-firewall"
-      ]
-    },
-    {
-      "p": "store user uploads in Vercel Blob",
-      "accept": [
-        "vercel:vercel-storage"
       ]
     },
     {
@@ -505,12 +655,6 @@
         "security-review",
         "code-reviewer",
         "secure-code-guardian"
-      ]
-    },
-    {
-      "p": "make a Word document with the meeting minutes",
-      "accept": [
-        "anthropic-skills:docx"
       ]
     },
     {
