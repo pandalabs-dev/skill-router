@@ -1,0 +1,10 @@
+{
+  "name": "skill-router",
+  "version": "0.1.0",
+  "description": "Surfaces the one or two skills relevant to each prompt (silent by default, capped, once per session) so the model loads only the skills it needs instead of guessing across a trimmed listing.",
+  "author": {
+    "name": "Andrija Peric"
+  },
+  "license": "MIT",
+  "keywords": ["skills", "routing", "hooks", "context", "tokens"]
+}

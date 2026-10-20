@@ -1,0 +1,31 @@
+{
+  "_comment": "Project-file signals. A hit nudges the listed skills (weight ~0.5-1.5); it never fires a suggestion on its own unless the prompt is a build/fix request with some term overlap.",
+  "rules": [
+    {"deps": ["expo", "expo-router", "react-native"], "files": ["app.json", "eas.json"], "skills": ["expo-router", "expo-native-ui", "expo-project-structure", "eas-workflows", "eas-app-stores", "react-native-expert", "expo-dev-client", "expo-upgrade"], "weight": 1.0},
+    {"deps": ["next"], "files": ["next.config.js", "next.config.mjs", "next.config.ts"], "skills": ["nextjs-developer", "vercel:nextjs", "vercel:next-cache-components", "vercel:next-upgrade"], "weight": 1.0},
+    {"deps": ["payload", "@payloadcms/*"], "skills": ["nextjs-developer", "vercel:nextjs"], "weight": 0.7},
+    {"files": ["vercel.json", ".vercel"], "skills": ["vercel:env-vars", "vercel:env", "vercel:deployments-cicd", "vercel:vercel-cli", "vercel:deploy", "vercel:vercel-functions"], "weight": 1.0},
+    {"files": ["*.csproj", "*.sln", "global.json", "Directory.Build.props"], "skills": ["csharp-developer", "dotnet-core-expert"], "weight": 1.0},
+    {"files": ["Cargo.toml"], "skills": ["rust-engineer"], "weight": 1.0},
+    {"files": ["go.mod"], "skills": ["golang-pro"], "weight": 1.0},
+    {"python": ["fastapi"], "skills": ["fastapi-expert", "python-pro"], "weight": 1.0},
+    {"python": ["django"], "skills": ["django-expert", "python-pro"], "weight": 1.0},
+    {"files": ["pyproject.toml", "requirements.txt"], "skills": ["python-pro"], "weight": 0.5},
+    {"files": ["wp-config.php", "wp-content"], "skills": ["wordpress-pro", "php-pro"], "weight": 1.0},
+    {"files": ["foundry.toml", "hardhat.config.js", "hardhat.config.ts"], "skills": ["solidity-security", "web3-testing"], "weight": 1.0},
+    {"files": ["Anchor.toml"], "skills": ["solana-vulnerability-scanner"], "weight": 1.0},
+    {"files": ["components.json"], "skills": ["shadcn"], "weight": 1.0},
+    {"files": ["playwright.config.ts", "playwright.config.js", "playwright.config.mjs"], "skills": ["playwright-expert"], "weight": 1.0},
+    {"files": ["tailwind.config.js", "tailwind.config.ts"], "deps": ["tailwindcss"], "skills": ["tailwind-design-system"], "weight": 0.5},
+    {"deps": ["@nestjs/core"], "skills": ["nestjs-expert"], "weight": 1.0},
+    {"deps": ["vue", "nuxt"], "skills": ["vue-expert"], "weight": 1.0},
+    {"deps": ["@angular/core"], "skills": ["angular-architect"], "weight": 1.0},
+    {"files": ["pubspec.yaml"], "skills": ["flutter-expert"], "weight": 1.0},
+    {"files": ["Gemfile"], "skills": ["rails-expert"], "weight": 0.7},
+    {"files": ["composer.json", "artisan"], "skills": ["laravel-specialist", "php-pro"], "weight": 0.7},
+    {"files": ["Package.swift", "*.xcodeproj"], "skills": ["swift-expert"], "weight": 1.0},
+    {"files": ["Dockerfile", "docker-compose.yml", "fly.toml"], "skills": ["devops-engineer"], "weight": 0.5},
+    {"files": ["*.tf"], "skills": ["terraform-engineer"], "weight": 1.0},
+    {"deps": ["drizzle-orm", "pg", "prisma", "@neondatabase/serverless"], "skills": ["postgres-pro"], "weight": 0.5}
+  ]
+}

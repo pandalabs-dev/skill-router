@@ -1,0 +1,17 @@
+{
+  "name": "skill-router",
+  "owner": {
+    "name": "Andrija Peric"
+  },
+  "metadata": {
+    "description": "Local marketplace for the skill-router plugin."
+  },
+  "plugins": [
+    {
+      "name": "skill-router",
+      "source": "./",
+      "description": "Prompt-time skill suggestions from an index of every installed skill description.",
+      "version": "0.1.0"
+    }
+  ]
+}
