@@ -1,91 +1,669 @@
 {
-  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. 'holdout' was frozen before tuning and must not be tuned against. 'fixture' names a synthetic project dir created by the tests (see eval_lib.FIXTURES).",
+  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. 'holdout' (v2) was frozen before the 0.2.1 tuning and must not be tuned against; 'holdout_v1' is the 0.2.0 holdout minus three prompts moved to dev. 'fixture' names a synthetic project dir (see eval_lib.FIXTURES).",
   "dev": [
-    {"p": "add a new tab screen with expo router", "accept": ["expo-router"]},
-    {"p": "run an SEO audit on example.com", "accept": ["seo", "seo-audit"]},
-    {"p": "add the STRIPE_KEY env var to the vercel project", "accept": ["vercel:env-vars", "vercel:env"]},
-    {"p": "turn this page into a Figma design", "accept": ["figma:figma-generate-design"]},
-    {"p": "review this diff for bugs before I merge", "accept": ["code-reviewer", "code-review"]},
-    {"p": "this test is flaky and fails randomly, find out why", "accept": ["superpowers:systematic-debugging", "test-master", "debugging-wizard"]},
-    {"p": "write a postgres migration adding an index", "accept": ["postgres-pro", "sql-pro"]},
-    {"p": "implement this Figma frame as a React component", "accept": ["figma:figma-design-to-code"]},
-    {"p": "build the settings screen from the Figma file in SwiftUI", "accept": ["figma:figma-swiftui", "figma:figma-design-to-code"]},
-    {"p": "create a FigJam diagram of the checkout flow", "accept": ["figma:figma-generate-diagram", "figma:figma-use-figjam"]},
-    {"p": "set up EAS workflows to build and submit the iOS app", "accept": ["eas-workflows", "eas-app-stores"]},
-    {"p": "submit the new build to the App Store and Google Play", "accept": ["eas-app-stores"]},
-    {"p": "migrate this React Native screen to use NativeTabs", "accept": ["expo-router", "expo-native-ui"]},
-    {"p": "upgrade the Expo SDK to the latest version", "accept": ["expo-upgrade"]},
-    {"p": "write a kubernetes deployment manifest with a horizontal pod autoscaler", "accept": ["kubernetes-specialist", "devops-engineer"]},
-    {"p": "write terraform for an S3 bucket with versioning", "accept": ["terraform-engineer"]},
-    {"p": "add a GraphQL resolver for the orders query with dataloader batching", "accept": ["graphql-architect"]},
-    {"p": "our websocket connections drop after 60 seconds behind the load balancer", "accept": ["websocket-engineer"]},
-    {"p": "write a Go HTTP handler with context cancellation", "accept": ["golang-pro"]},
-    {"p": "fix the borrow checker error in this Rust function", "accept": ["rust-engineer"]},
-    {"p": "add a FastAPI endpoint with pydantic validation", "accept": ["fastapi-expert", "python-pro"]},
-    {"p": "create a Django model and admin for invoices", "accept": ["django-expert"]},
-    {"p": "add an ASP.NET Core minimal API endpoint with EF Core", "accept": ["dotnet-core-expert", "csharp-developer"]},
-    {"p": "write a WordPress plugin that adds a custom post type", "accept": ["wordpress-pro", "php-pro"]},
-    {"p": "audit this Solidity contract for reentrancy", "accept": ["solidity-security"]},
-    {"p": "add a shadcn dialog component for confirming deletes", "accept": ["shadcn", "ui-styling"]},
-    {"p": "write Playwright end-to-end tests for the login flow", "accept": ["playwright-expert", "test-master"]},
-    {"p": "improve Core Web Vitals, the LCP is 4 seconds", "accept": ["seo-technical", "seo", "seo-unlighthouse"]},
-    {"p": "add JSON-LD structured data for products", "accept": ["seo-schema"]},
-    {"p": "check the hreflang tags on the German and French pages", "accept": ["seo-hreflang"]},
-    {"p": "generate an XML sitemap for the blog", "accept": ["seo-sitemap"]},
-    {"p": "create a design system with tokens for colors, spacing and typography", "accept": ["design-system", "tailwind-design-system", "ui-ux-pro-max", "figma:figma-generate-library"]},
-    {"p": "design a landing page that doesn't look like a template", "accept": ["design-taste-frontend", "frontend-design:frontend-design", "impeccable", "high-end-visual-design", "gpt-taste"]},
-    {"p": "make a slide deck for the investor pitch", "accept": ["slides", "anthropic-skills:pptx", "figma:figma-use-slides"]},
-    {"p": "generate a product photo with a studio background", "accept": ["higgsfield-product-photoshoot", "higgsfield-generate"]},
-    {"p": "make a short promo video from this image", "accept": ["higgsfield-generate", "higgsfield-video-explainer"]},
-    {"p": "write an implementation plan for this feature before coding", "accept": ["superpowers:writing-plans", "feature-forge"]},
-    {"p": "I want to brainstorm ideas for a new onboarding flow", "accept": ["superpowers:brainstorming"]},
-    {"p": "use TDD to implement the fee calculator", "accept": ["superpowers:test-driven-development", "test-master"]},
-    {"p": "set up a git worktree for this feature branch", "accept": ["superpowers:using-git-worktrees"]},
-    {"p": "create a Jira ticket for this bug in the backlog", "accept": ["atlassian-mcp"]},
-    {"p": "add a feature flag for the new checkout with the Flags SDK", "accept": ["vercel:flags-sdk"]},
-    {"p": "stream chat responses with the AI SDK useChat hook", "accept": ["vercel:ai-sdk"]},
-    {"p": "fill out this PDF form and merge it with the cover letter", "accept": ["anthropic-skills:pdf"]},
-    {"p": "build a chart of monthly revenue by region", "accept": ["dataviz"]},
-    {"p": "refactor this module safely without changing behavior", "accept": ["safe-refactor", "simplify"]},
-    {"p": "scan this Anchor program for vulnerabilities", "accept": ["solana-vulnerability-scanner"]},
-    {"p": "write a pandas script to pivot the sales CSV by month", "accept": ["pandas-pro"]},
-    {"p": "build an MCP server that exposes our REST API as tools", "accept": ["mcp-developer"]},
-    {"p": "add a Laravel queue job that sends invoice emails", "accept": ["laravel-specialist"]},
-    {"p": "what's the status of the deploy?", "fixture": "vercel", "accept": ["vercel:status", "vercel:deployments-cicd"]},
-    {"p": "add a settings screen with a toggle for notifications", "fixture": "expo", "accept": ["expo-router", "expo-native-ui", "expo-ui", "react-native-expert"]}
+    {
+      "p": "add a new tab screen with expo router",
+      "accept": [
+        "expo-router"
+      ]
+    },
+    {
+      "p": "run an SEO audit on example.com",
+      "accept": [
+        "seo",
+        "seo-audit"
+      ]
+    },
+    {
+      "p": "add the STRIPE_KEY env var to the vercel project",
+      "accept": [
+        "vercel:env-vars",
+        "vercel:env"
+      ]
+    },
+    {
+      "p": "turn this page into a Figma design",
+      "accept": [
+        "figma:figma-generate-design"
+      ]
+    },
+    {
+      "p": "review this diff for bugs before I merge",
+      "accept": [
+        "code-reviewer",
+        "code-review"
+      ]
+    },
+    {
+      "p": "this test is flaky and fails randomly, find out why",
+      "accept": [
+        "superpowers:systematic-debugging",
+        "test-master",
+        "debugging-wizard"
+      ]
+    },
+    {
+      "p": "write a postgres migration adding an index",
+      "accept": [
+        "postgres-pro",
+        "sql-pro"
+      ]
+    },
+    {
+      "p": "implement this Figma frame as a React component",
+      "accept": [
+        "figma:figma-design-to-code"
+      ]
+    },
+    {
+      "p": "build the settings screen from the Figma file in SwiftUI",
+      "accept": [
+        "figma:figma-swiftui",
+        "figma:figma-design-to-code"
+      ]
+    },
+    {
+      "p": "create a FigJam diagram of the checkout flow",
+      "accept": [
+        "figma:figma-generate-diagram",
+        "figma:figma-use-figjam"
+      ]
+    },
+    {
+      "p": "set up EAS workflows to build and submit the iOS app",
+      "accept": [
+        "eas-workflows",
+        "eas-app-stores"
+      ]
+    },
+    {
+      "p": "submit the new build to the App Store and Google Play",
+      "accept": [
+        "eas-app-stores"
+      ]
+    },
+    {
+      "p": "migrate this React Native screen to use NativeTabs",
+      "accept": [
+        "expo-router",
+        "expo-native-ui"
+      ]
+    },
+    {
+      "p": "upgrade the Expo SDK to the latest version",
+      "accept": [
+        "expo-upgrade"
+      ]
+    },
+    {
+      "p": "write a kubernetes deployment manifest with a horizontal pod autoscaler",
+      "accept": [
+        "kubernetes-specialist",
+        "devops-engineer"
+      ]
+    },
+    {
+      "p": "write terraform for an S3 bucket with versioning",
+      "accept": [
+        "terraform-engineer"
+      ]
+    },
+    {
+      "p": "add a GraphQL resolver for the orders query with dataloader batching",
+      "accept": [
+        "graphql-architect"
+      ]
+    },
+    {
+      "p": "our websocket connections drop after 60 seconds behind the load balancer",
+      "accept": [
+        "websocket-engineer"
+      ]
+    },
+    {
+      "p": "write a Go HTTP handler with context cancellation",
+      "accept": [
+        "golang-pro"
+      ]
+    },
+    {
+      "p": "fix the borrow checker error in this Rust function",
+      "accept": [
+        "rust-engineer"
+      ]
+    },
+    {
+      "p": "add a FastAPI endpoint with pydantic validation",
+      "accept": [
+        "fastapi-expert",
+        "python-pro"
+      ]
+    },
+    {
+      "p": "create a Django model and admin for invoices",
+      "accept": [
+        "django-expert"
+      ]
+    },
+    {
+      "p": "add an ASP.NET Core minimal API endpoint with EF Core",
+      "accept": [
+        "dotnet-core-expert",
+        "csharp-developer"
+      ]
+    },
+    {
+      "p": "write a WordPress plugin that adds a custom post type",
+      "accept": [
+        "wordpress-pro",
+        "php-pro"
+      ]
+    },
+    {
+      "p": "audit this Solidity contract for reentrancy",
+      "accept": [
+        "solidity-security"
+      ]
+    },
+    {
+      "p": "add a shadcn dialog component for confirming deletes",
+      "accept": [
+        "shadcn",
+        "ui-styling"
+      ]
+    },
+    {
+      "p": "write Playwright end-to-end tests for the login flow",
+      "accept": [
+        "playwright-expert",
+        "test-master"
+      ]
+    },
+    {
+      "p": "improve Core Web Vitals, the LCP is 4 seconds",
+      "accept": [
+        "seo-technical",
+        "seo",
+        "seo-unlighthouse"
+      ]
+    },
+    {
+      "p": "add JSON-LD structured data for products",
+      "accept": [
+        "seo-schema"
+      ]
+    },
+    {
+      "p": "check the hreflang tags on the German and French pages",
+      "accept": [
+        "seo-hreflang"
+      ]
+    },
+    {
+      "p": "generate an XML sitemap for the blog",
+      "accept": [
+        "seo-sitemap"
+      ]
+    },
+    {
+      "p": "create a design system with tokens for colors, spacing and typography",
+      "accept": [
+        "design-system",
+        "tailwind-design-system",
+        "ui-ux-pro-max",
+        "figma:figma-generate-library"
+      ]
+    },
+    {
+      "p": "design a landing page that doesn't look like a template",
+      "accept": [
+        "design-taste-frontend",
+        "frontend-design:frontend-design",
+        "impeccable",
+        "high-end-visual-design",
+        "gpt-taste"
+      ]
+    },
+    {
+      "p": "make a slide deck for the investor pitch",
+      "accept": [
+        "slides",
+        "anthropic-skills:pptx",
+        "figma:figma-use-slides"
+      ]
+    },
+    {
+      "p": "generate a product photo with a studio background",
+      "accept": [
+        "higgsfield-product-photoshoot",
+        "higgsfield-generate"
+      ]
+    },
+    {
+      "p": "make a short promo video from this image",
+      "accept": [
+        "higgsfield-generate",
+        "higgsfield-video-explainer"
+      ]
+    },
+    {
+      "p": "write an implementation plan for this feature before coding",
+      "accept": [
+        "superpowers:writing-plans",
+        "feature-forge"
+      ]
+    },
+    {
+      "p": "I want to brainstorm ideas for a new onboarding flow",
+      "accept": [
+        "superpowers:brainstorming"
+      ]
+    },
+    {
+      "p": "use TDD to implement the fee calculator",
+      "accept": [
+        "superpowers:test-driven-development",
+        "test-master"
+      ]
+    },
+    {
+      "p": "set up a git worktree for this feature branch",
+      "accept": [
+        "superpowers:using-git-worktrees"
+      ]
+    },
+    {
+      "p": "create a Jira ticket for this bug in the backlog",
+      "accept": [
+        "atlassian-mcp"
+      ]
+    },
+    {
+      "p": "add a feature flag for the new checkout with the Flags SDK",
+      "accept": [
+        "vercel:flags-sdk"
+      ]
+    },
+    {
+      "p": "stream chat responses with the AI SDK useChat hook",
+      "accept": [
+        "vercel:ai-sdk"
+      ]
+    },
+    {
+      "p": "fill out this PDF form and merge it with the cover letter",
+      "accept": [
+        "anthropic-skills:pdf"
+      ]
+    },
+    {
+      "p": "build a chart of monthly revenue by region",
+      "accept": [
+        "dataviz"
+      ]
+    },
+    {
+      "p": "refactor this module safely without changing behavior",
+      "accept": [
+        "safe-refactor",
+        "simplify"
+      ]
+    },
+    {
+      "p": "scan this Anchor program for vulnerabilities",
+      "accept": [
+        "solana-vulnerability-scanner"
+      ]
+    },
+    {
+      "p": "write a pandas script to pivot the sales CSV by month",
+      "accept": [
+        "pandas-pro"
+      ]
+    },
+    {
+      "p": "build an MCP server that exposes our REST API as tools",
+      "accept": [
+        "mcp-developer"
+      ]
+    },
+    {
+      "p": "add a Laravel queue job that sends invoice emails",
+      "accept": [
+        "laravel-specialist"
+      ]
+    },
+    {
+      "p": "what's the status of the deploy?",
+      "fixture": "vercel",
+      "accept": [
+        "vercel:status",
+        "vercel:deployments-cicd"
+      ]
+    },
+    {
+      "p": "add a settings screen with a toggle for notifications",
+      "fixture": "expo",
+      "accept": [
+        "expo-router",
+        "expo-native-ui",
+        "expo-ui",
+        "react-native-expert"
+      ]
+    },
+    {
+      "p": "translate this Figma mockup into a Next.js page",
+      "accept": [
+        "figma:figma-design-to-code"
+      ]
+    },
+    {
+      "p": "why does this query take so long, look at the EXPLAIN output",
+      "accept": [
+        "sql-pro",
+        "postgres-pro",
+        "database-optimizer"
+      ]
+    },
+    {
+      "p": "convert this screenshot into HTML and CSS",
+      "accept": [
+        "image-to-code"
+      ]
+    }
   ],
   "holdout": [
-    {"p": "translate this Figma mockup into a Next.js page", "accept": ["figma:figma-design-to-code"]},
-    {"p": "push my React login screen into Figma", "accept": ["figma:figma-generate-design", "figma:figma-code-workflows"]},
-    {"p": "the deploy is broken on vercel, the build fails with a module not found error", "accept": ["vercel:deployments-cicd", "vercel:vercel-cli", "superpowers:systematic-debugging", "debugging-wizard"]},
-    {"p": "why does this query take so long, look at the EXPLAIN output", "accept": ["sql-pro", "postgres-pro", "database-optimizer"]},
-    {"p": "root cause this crash in the payment worker", "accept": ["superpowers:systematic-debugging", "debugging-wizard"]},
-    {"p": "upload the build to testflight", "accept": ["eas-app-stores", "expo-dev-client"]},
-    {"p": "add a k8s ingress with TLS for the api", "accept": ["kubernetes-specialist"]},
-    {"p": "set up gh actions to run lint on every pull request", "accept": ["devops-engineer"]},
-    {"p": "write a Spring Boot REST controller with validation", "accept": ["spring-boot-engineer", "java-architect"]},
-    {"p": "create a Flutter widget for the profile page", "accept": ["flutter-expert"]},
-    {"p": "add Vue 3 composition API state for the cart", "accept": ["vue-expert", "vue-expert-js"]},
-    {"p": "local SEO for a dental clinic, Google Business Profile", "accept": ["seo-local"]},
-    {"p": "analyze our backlinks and referring domains", "accept": ["seo-backlinks", "seo-ahrefs"]},
-    {"p": "build a RAG pipeline with embeddings and a vector store", "accept": ["rag-architect"]},
-    {"p": "fine-tune a small LLM with LoRA on our support tickets", "accept": ["fine-tuning-expert"]},
-    {"p": "write the Shopify theme section for featured products", "accept": ["shopify-expert"]},
-    {"p": "convert this screenshot into HTML and CSS", "accept": ["image-to-code"]},
-    {"p": "add dark mode to the app with Tailwind", "accept": ["tailwind-design-system", "ui-styling", "expo-tailwind-setup"]},
-    {"p": "create an Excel spreadsheet with the quarterly budget formulas", "accept": ["anthropic-skills:xlsx"]},
-    {"p": "call the Claude API with prompt caching from python", "accept": ["claude-api"]}
+    {
+      "p": "port this Figma screen to a SwiftUI view",
+      "accept": [
+        "figma:figma-swiftui",
+        "figma:figma-design-to-code"
+      ]
+    },
+    {
+      "p": "export our pricing page component to Figma so design can edit it",
+      "accept": [
+        "figma:figma-generate-design",
+        "figma:figma-code-workflows"
+      ]
+    },
+    {
+      "p": "the query plan shows a seq scan on users, add the right index",
+      "accept": [
+        "postgres-pro",
+        "sql-pro",
+        "database-optimizer"
+      ]
+    },
+    {
+      "p": "turn this wireframe image into a React component",
+      "accept": [
+        "image-to-code",
+        "imagegen-frontend-web"
+      ]
+    },
+    {
+      "p": "write a Helm chart for the worker deployment",
+      "accept": [
+        "kubernetes-specialist",
+        "devops-engineer"
+      ]
+    },
+    {
+      "p": "create a terraform module for a VPC with private subnets",
+      "accept": [
+        "terraform-engineer",
+        "cloud-architect"
+      ]
+    },
+    {
+      "p": "set up OTA updates with EAS Update for the production channel",
+      "accept": [
+        "eas-workflows",
+        "eas-update-insights"
+      ]
+    },
+    {
+      "p": "add rate limiting to the Vercel firewall for the login route",
+      "accept": [
+        "vercel:vercel-firewall"
+      ]
+    },
+    {
+      "p": "store user uploads in Vercel Blob",
+      "accept": [
+        "vercel:vercel-storage"
+      ]
+    },
+    {
+      "p": "write pytest fixtures for the FastAPI app",
+      "accept": [
+        "fastapi-expert",
+        "python-pro",
+        "test-master"
+      ]
+    },
+    {
+      "p": "add schema markup for local business reviews",
+      "accept": [
+        "seo-schema",
+        "seo-local"
+      ]
+    },
+    {
+      "p": "plan a topic cluster for our blog around payments",
+      "accept": [
+        "seo-cluster",
+        "seo-plan",
+        "seo-content-brief"
+      ]
+    },
+    {
+      "p": "build a NestJS module with a guard for admin routes",
+      "accept": [
+        "nestjs-expert"
+      ]
+    },
+    {
+      "p": "convert this Angular service to use signals",
+      "accept": [
+        "angular-architect"
+      ]
+    },
+    {
+      "p": "create a brand style guide with logo usage and colors",
+      "accept": [
+        "brand",
+        "brandkit",
+        "design-system"
+      ]
+    },
+    {
+      "p": "find the memory leak in this Rust async task",
+      "accept": [
+        "rust-engineer",
+        "superpowers:systematic-debugging",
+        "debugging-wizard"
+      ]
+    },
+    {
+      "p": "write a Kotlin coroutine flow for the sync job",
+      "accept": [
+        "kotlin-specialist"
+      ]
+    },
+    {
+      "p": "design the REST API for invoices with pagination and versioning",
+      "accept": [
+        "api-designer"
+      ]
+    },
+    {
+      "p": "review this PR for security issues like SQL injection",
+      "accept": [
+        "security-reviewer",
+        "security-review",
+        "code-reviewer",
+        "secure-code-guardian"
+      ]
+    },
+    {
+      "p": "make a Word document with the meeting minutes",
+      "accept": [
+        "anthropic-skills:docx"
+      ]
+    },
+    {
+      "p": "summarize the research on passkeys vs passwords with sources",
+      "accept": [
+        "anthropic-skills:deep-research"
+      ]
+    }
+  ],
+  "holdout_v1": [
+    {
+      "p": "push my React login screen into Figma",
+      "accept": [
+        "figma:figma-generate-design",
+        "figma:figma-code-workflows"
+      ]
+    },
+    {
+      "p": "the deploy is broken on vercel, the build fails with a module not found error",
+      "accept": [
+        "vercel:deployments-cicd",
+        "vercel:vercel-cli",
+        "superpowers:systematic-debugging",
+        "debugging-wizard"
+      ]
+    },
+    {
+      "p": "root cause this crash in the payment worker",
+      "accept": [
+        "superpowers:systematic-debugging",
+        "debugging-wizard"
+      ]
+    },
+    {
+      "p": "upload the build to testflight",
+      "accept": [
+        "eas-app-stores",
+        "expo-dev-client"
+      ]
+    },
+    {
+      "p": "add a k8s ingress with TLS for the api",
+      "accept": [
+        "kubernetes-specialist"
+      ]
+    },
+    {
+      "p": "set up gh actions to run lint on every pull request",
+      "accept": [
+        "devops-engineer"
+      ]
+    },
+    {
+      "p": "write a Spring Boot REST controller with validation",
+      "accept": [
+        "spring-boot-engineer",
+        "java-architect"
+      ]
+    },
+    {
+      "p": "create a Flutter widget for the profile page",
+      "accept": [
+        "flutter-expert"
+      ]
+    },
+    {
+      "p": "add Vue 3 composition API state for the cart",
+      "accept": [
+        "vue-expert",
+        "vue-expert-js"
+      ]
+    },
+    {
+      "p": "local SEO for a dental clinic, Google Business Profile",
+      "accept": [
+        "seo-local"
+      ]
+    },
+    {
+      "p": "analyze our backlinks and referring domains",
+      "accept": [
+        "seo-backlinks",
+        "seo-ahrefs"
+      ]
+    },
+    {
+      "p": "build a RAG pipeline with embeddings and a vector store",
+      "accept": [
+        "rag-architect"
+      ]
+    },
+    {
+      "p": "fine-tune a small LLM with LoRA on our support tickets",
+      "accept": [
+        "fine-tuning-expert"
+      ]
+    },
+    {
+      "p": "write the Shopify theme section for featured products",
+      "accept": [
+        "shopify-expert"
+      ]
+    },
+    {
+      "p": "add dark mode to the app with Tailwind",
+      "accept": [
+        "tailwind-design-system",
+        "ui-styling",
+        "expo-tailwind-setup"
+      ]
+    },
+    {
+      "p": "create an Excel spreadsheet with the quarterly budget formulas",
+      "accept": [
+        "anthropic-skills:xlsx"
+      ]
+    },
+    {
+      "p": "call the Claude API with prompt caching from python",
+      "accept": [
+        "claude-api"
+      ]
+    }
   ],
   "silent": [
-    "hi", "yes", "/help", "ok go on", "continue", "do it", "✨",
-    "thanks, that looks good", "lgtm, ship it", "commit this and push to main",
-    "what does this function do?", "summarize what we changed today",
-    "let's pause here, write down where we are", "what is the difference between these two approaches",
-    "how long will this take?", "can you say that again in simpler words",
-    "rename the variable userId to accountId in this file", "which file did you change last",
-    "sounds good, go ahead with option B", "good morning, what are we working on",
-    "is that expected?", "why did you do it that way",
-    {"p": "what's the status of the deploy?", "fixture": "plain"}
+    "hi",
+    "yes",
+    "/help",
+    "ok go on",
+    "continue",
+    "do it",
+    "✨",
+    "thanks, that looks good",
+    "lgtm, ship it",
+    "commit this and push to main",
+    "what does this function do?",
+    "summarize what we changed today",
+    "let's pause here, write down where we are",
+    "what is the difference between these two approaches",
+    "how long will this take?",
+    "can you say that again in simpler words",
+    "rename the variable userId to accountId in this file",
+    "which file did you change last",
+    "sounds good, go ahead with option B",
+    "good morning, what are we working on",
+    "is that expected?",
+    "why did you do it that way",
+    {
+      "p": "what's the status of the deploy?",
+      "fixture": "plain"
+    },
+    "explain this to me",
+    "can you explain that again, slower"
   ],
   "everyday": [
     "commit this and push to main",

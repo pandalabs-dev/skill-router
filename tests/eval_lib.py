@@ -71,8 +71,8 @@ def parse_names(text):
 def metrics(h, data=None):
     data = data or load_set()
     out = {}
-    for split in ("dev", "holdout"):
-        items = [i for i in data[split] if set(i["accept"]) & h.names]
+    for split in ("dev", "holdout", "holdout_v1"):
+        items = [i for i in data.get(split, []) if set(i["accept"]) & h.names]
         top1 = hit = fired = 0
         misses = []
         for it in items:
@@ -121,7 +121,7 @@ def main():
     h = Harness()
     try:
         m = metrics(h)
-        splits = ("dev", "holdout") if "--holdout" in sys.argv else ("dev",)
+        splits = ("dev", "holdout", "holdout_v1") if "--holdout" in sys.argv else ("dev", "holdout_v1")
         for split in splits:
             d = m[split]
             print("%-8s n=%d top1=%.0f%% hit@5=%.0f%% fired=%.0f%%" % (split, d["n"], d["top1"] * 100, d["hit5"] * 100, d["fired"] * 100))
