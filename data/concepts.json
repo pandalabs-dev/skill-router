@@ -1,0 +1,249 @@
+{
+ "_doc": "Deep-mode concept thesaurus: everyday phrasing (regex, case-insensitive) -> the technical terms skill descriptions use. Applied only in deep mode, as query expansion at reduced weight; the matched words are replaced by the terms so they don't pull in unrelated skills.",
+ "concepts": [
+  [
+   "\\b(?:guess(?:ing)?|trying|try|spray(?:ing)?|hammer(?:ing|ed)?)\\b.{0,40}\\bpasswords?\\b|\\bpasswords?\\b.{0,30}\\b(?:guess\\w*|brute)",
+   "brute force attack authentication security"
+  ],
+  [
+   "\\bspam(?:ming|med)?\\b.{0,30}\\b(?:signup|sign-up|login|form|endpoint|api)\\b|\\b(?:bots?|scripts?)\\b.{0,30}\\b(?:signup|login|form|endpoint|abuse)",
+   "rate limiting abuse bot protection security"
+  ],
+  [
+   "\\bsteal(?:ing)?\\b.{0,30}\\b(?:sessions?|cookies?|tokens?|accounts?)\\b|\\bhijack\\w*",
+   "session hijacking cookie security vulnerability"
+  ],
+  [
+   "\\b(?:leaks?|leaking|expose[sd]?|see|read|access)\\b.{0,40}\\b(?:other (?:users|customers|people)'?s?|someone else'?s)\\b",
+   "idor authorization access control vulnerability security"
+  ],
+  [
+   "\\b(?:hack(?:ed|er|ers)?|exploit(?:s|ed)?|attack(?:s|er|ers)?|breach(?:ed)?)\\b",
+   "security vulnerability attack"
+  ],
+  [
+   "\\b(?:sign|log)(?:ging)?[- ]?(?:in|on)\\s+(?:with|via|using)\\s+(?:google|github|apple|microsoft|facebook|twitter|x)\\b|\\b(?:google|github|apple|social)\\s+(?:login|sign[- ]?in|auth)\\b|\\bsocial login\\b|\\bsso\\b|\\boauth\\b",
+   "authentication oauth social login auth provider"
+  ],
+  [
+   "\\b(?:log ?in|login|sign ?in|sign ?up|signup|passwords?|magic link|2fa|mfa|two[- ]factor)\\b",
+   "authentication auth login"
+  ],
+  [
+   "\\b(?:fancy|upscale|luxur\\w*|premium|expensive|high[- ]?end|classy|elegant|polished|sophisticated)\\b",
+   "high-end premium luxury visual design"
+  ],
+  [
+   "\\b(?:cheap|generic|boring|bland|template-?y|looks? like a template|ai slop|basic looking)\\b",
+   "design taste anti-generic distinctive visual design"
+  ],
+  [
+   "\\b(?:minimal|minimalist|clean|calm|simple|airy|whitespace)\\b.{0,30}\\b(?:look|feel|design|ui|layout|section|page|style)\\b",
+   "minimalist ui clean design"
+  ],
+  [
+   "\\b(?:brutalist|raw|industrial)\\b.{0,20}\\b(?:look|design|style|ui)\\b",
+   "brutalist industrial ui design"
+  ],
+  [
+   "\\b(?:dark mode|light mode|theme|theming|color palette|colou?rs?)\\b",
+   "theme dark mode color palette design system"
+  ],
+  [
+   "\\b(?:fewer|less|short(?:er)?|terse|brief|concise)\\b.{0,20}\\b(?:words?|answers?|replies|responses|output|tokens?)\\b|\\bsave tokens\\b|\\bcaveman\\b|\\b(?:answers?|replies|responses|output)\\b.{0,20}\\b(?:short|shorter|terse|brief|concise)\\b",
+   "caveman terse compressed brief output"
+  ],
+  [
+   "\\b(?:slow|sluggish|crawling|laggy|takes? (?:forever|ages|so long))\\b.{0,40}\\b(?:quer(?:y|ies)|sql|database|db|table|postgres|mysql)\\b|\\b(?:quer(?:y|ies)|sql|database|db)\\b.{0,40}\\b(?:slow|sluggish|crawling|forever|times? out)\\b|\\b(?:database|db)\\b.{0,40}\\b(?:under load|lots of (?:users|traffic)|many users|high traffic)\\b",
+   "slow query database performance optimization index"
+  ],
+  [
+   "\\b(?:slow|sluggish|laggy|janky|takes? forever)\\b.{0,30}\\b(?:page|site|app|load(?:ing)?|render\\w*)\\b|\\bre-?renders?\\b|\\bjumps? around\\b|\\blayout shift\\b",
+   "performance rendering optimization"
+  ],
+  [
+   "\\b(?:build|builds|compile|compilation|bundl\\w*)\\b.{0,20}\\b(?:slow|times?|faster|speed)\\b|\\bspeed up\\b.{0,20}\\bbuilds?\\b",
+   "build performance bundler turbopack"
+  ],
+  [
+   "\\b(?:google|search|bing)\\b.{0,30}\\b(?:find|finds|found|show|shows|visible|dropped|vanish\\w*|disappear\\w*|traffic)\\b|\\b(?:find|finds|show up|dropped off|vanish\\w*|disappear\\w*)\\b.{0,30}\\b(?:on|in|from|off) (?:google|search)\\b|\\b(?:nobody|no one|people can'?t|customers can'?t) finds?\\b.{0,20}\\b(?:us|our|the site|the blog|the page)",
+   "seo search ranking organic traffic indexing"
+  ],
+  [
+   "\\brich (?:snippets?|results?)\\b|\\bstars? in (?:google|search)\\b",
+   "seo schema structured data"
+  ],
+  [
+   "\\b(?:german|french|spanish|italian|languages?|locales?|translat\\w*)\\b.{0,40}\\b(?:tags?|versions?|seo|google)\\b",
+   "hreflang international seo"
+  ],
+  [
+   "\\b(?:ship|push|put|deploy|release|launch|publish)\\b.{0,30}\\b(?:prod|production|live|online)\\b|\\bgo live\\b",
+   "deploy deployment production release"
+  ],
+  [
+   "\\b(?:app store|play store|testflight|google play)\\b|\\bput\\b.{0,20}\\bapp\\b.{0,20}\\bstore\\b",
+   "app store submission eas ios android release"
+  ],
+  [
+   "\\b(?:continuous (?:deployment|integration|delivery)|auto[- ]?deploy\\w*|on every (?:push|commit|pr|pull request))\\b",
+   "ci cd pipeline github actions devops"
+  ],
+  [
+   "\\b(?:containers?|containeri[sz]\\w*|docker\\w*)\\b",
+   "docker container devops"
+  ],
+  [
+   "\\b(?:pods?|cluster|helm)\\b",
+   "kubernetes cluster"
+  ],
+  [
+   "\\b(?:aws|gcp|azure|cloud)\\b.{0,30}\\b(?:move|migrat\\w*|servers?|host\\w*|infra\\w*)\\b|\\bservers?\\b.{0,30}\\b(?:aws|gcp|azure|cloud)\\b",
+   "cloud architecture migration infrastructure"
+  ],
+  [
+   "\\b(?:alerts?|paged?|pager|on-?call|error rate|spikes?|uptime|downtime)\\b",
+   "monitoring alerting observability"
+  ],
+  [
+   "\\b(?:works? sometimes|sometimes (?:works|fails|not)|randomly|intermittent\\w*|flaky|flakes?|can'?t reproduce|heisenbug)\\b|\\bpass(?:es)? locally\\b.{0,30}\\bfail",
+   "intermittent bug debugging root cause flaky"
+  ],
+  [
+   "\\b(?:crash(?:es|ed|ing)?|broken|breaks?|keeps? restarting|stack trace|exception|not working|stopped working)\\b",
+   "bug debugging root cause error"
+  ],
+  [
+   "\\b(?:nothing (?:broke|is broken)|make sure it works|double[- ]check|before i (?:say|call) it(?:'s| is)? done|verify (?:it|everything))\\b",
+   "verification before completion verify tests"
+  ],
+  [
+   "\\b(?:click(?:s|ing)? through|end[- ]to[- ]end|e2e|browser tests?|ui tests?)\\b",
+   "end-to-end browser testing playwright"
+  ],
+  [
+   "\\b(?:tests? first|red[- ]green|test[- ]driven)\\b",
+   "test-driven development tdd"
+  ],
+  [
+   "\\b(?:unit tests?|test coverage|write tests?|tests? for)\\b",
+   "unit testing test"
+  ],
+  [
+   "\\b(?:clean (?:it )?up|tidy|untangle|messy|spaghetti|god (?:component|class|object))\\b",
+   "refactor simplify clean code"
+  ],
+  [
+   "\\bwithout changing (?:what it does|behaviou?r|the behaviou?r|functionality)\\b|\\bsame behaviou?r\\b",
+   "safe refactor behavior preserving"
+  ],
+  [
+   "\\b(?:pull request|pr|diff|merge request)\\b.{0,30}\\b(?:check|review|look|problems?|issues?|bugs?)\\b|\\b(?:review|check|look over)\\b.{0,30}\\b(?:pull request|pr|diff|changes)\\b",
+   "code review"
+  ],
+  [
+   "\\b(?:plan(?:ning)? (?:out|ahead)|before (?:coding|writing code|i code)|break (?:it )?down into steps|spec it out)\\b",
+   "implementation plan spec writing plans"
+  ],
+  [
+   "\\b(?:brainstorm\\w*|ideas for|explore (?:approaches|options|alternatives))\\b",
+   "brainstorming ideas design exploration"
+  ],
+  [
+   "\\b(?:word (?:file|doc|document)|\\.docx|ms word|cover letter)\\b",
+   "word document docx"
+  ],
+  [
+   "\\b(?:spreadsheet|excel|\\.xlsx|google sheets?|csv)\\b",
+   "spreadsheet excel xlsx"
+  ],
+  [
+   "\\b(?:slides?|deck|presentation|powerpoint|keynote)\\b",
+   "presentation slides pptx deck"
+  ],
+  [
+   "\\bpdfs?\\b",
+   "pdf document"
+  ],
+  [
+   "\\b(?:chart|graph|dashboard|visuali[sz]\\w*)\\b|\\bplot\\b.{0,20}\\b(?:data|values|metrics|series|numbers)\\b",
+   "chart data visualization dashboard"
+  ],
+  [
+   "\\b(?:grounded|answers? from (?:our|the|company) (?:docs|documents|knowledge)|knowledge base|chat with (?:our )?docs|embeddings?|vector (?:db|database|store))\\b",
+   "rag retrieval augmented generation embeddings vector search"
+  ],
+  [
+   "\\b(?:chatbot|chat bot|assistant|agent)\\b",
+   "ai chat agent llm"
+  ],
+  [
+   "\\b(?:claude|anthropic)\\b",
+   "claude api anthropic sdk"
+  ],
+  [
+   "\\b(?:prompt(?:ing)?|system prompt|few[- ]shot)\\b",
+   "prompt engineering"
+  ],
+  [
+   "\\b(?:fine[- ]?tun\\w*|lora|train(?:ing)? (?:a |the |our )?model)\\b",
+   "fine-tuning model training"
+  ],
+  [
+   "\\b(?:video|reel|clip|ad|commercial|tiktok|instagram)\\b",
+   "video generation media"
+  ],
+  [
+   "\\b(?:photo|picture|image|illustration)\\b.{0,30}\\b(?:generat\\w*|make|create|of)\\b|\\bog image\\b",
+   "image generation"
+  ],
+  [
+   "\\b(?:screenshot|mockup|wireframe|design image|picture of the ui)\\b",
+   "image to code screenshot conversion"
+  ],
+  [
+   "\\b(?:diagram|flowchart|architecture drawing|whiteboard)\\b",
+   "diagram figjam visualization"
+  ],
+  [
+   "\\b(?:rest|http|json)\\s+api\\b|\\bapi\\b.{0,30}\\b(?:design|endpoints?|routes?|docs|versioning|pagination)\\b",
+   "api design rest openapi"
+  ],
+  [
+   "\\b(?:real[- ]?time|live updates?|push updates?|socket)\\b",
+   "websocket real-time"
+  ],
+  [
+   "\\b(?:schema change|add(?:ing)? a column|rename (?:a )?column|migrat\\w* (?:the )?(?:db|database|schema|table))\\b",
+   "database migration schema"
+  ],
+  [
+   "\\b(?:smart contract|solidity|evm|erc-?20|nft|defi)\\b",
+   "smart contract solidity security web3"
+  ],
+  [
+   "\\b(?:tabs?|bottom (?:bar|navigation)|stack navigator|screens?)\\b.{0,30}\\b(?:expo|react native|mobile|app)\\b|\\b(?:expo|react native)\\b.{0,30}\\b(?:tabs?|navigation|screens?)\\b",
+   "expo router navigation tabs"
+  ],
+  [
+   "\\b(?:uploads?|files?|images?|blobs?)\\b.{0,30}\\b(?:store|storage|save|bucket)\\b|\\b(?:store|save)\\b.{0,30}\\b(?:uploads?|files?)\\b",
+   "file storage blob upload"
+  ],
+  [
+   "\\b(?:feature flags?|toggles?|a/b tests?|experiments?)\\b",
+   "feature flags experimentation"
+  ],
+  [
+   "\\b(?:cron|nightly|every (?:day|night|hour|morning)|scheduled? jobs?)\\b",
+   "schedule cron recurring job"
+  ],
+  [
+   "\\b(?:accessib\\w*|a11y|screen readers?|aria|contrast)\\b",
+   "accessibility wcag"
+  ],
+  [
+   "\\b(?:animat\\w*|transitions?|motion|micro-?interactions?)\\b",
+   "animation motion"
+  ]
+ ]
+}

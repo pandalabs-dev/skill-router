@@ -17,29 +17,118 @@ MAX_NAMES = 5
 MAX_CHARS = 700
 LOW_BAR = 8.0          # deep score a skill must reach to be listed at all
 REL_BAR = 0.35         # ... and this fraction of the best deep score
-PURPOSE_CHARS = 90
+PURPOSE_CHARS = 80
+CONCEPT_WEIGHT = 0.6   # thesaurus terms count, but less than the user's own words
 
 _WHEN_HEAD = re.compile(r"when|use (?:this|it|cases?)|usage|trigger|purpose|overview|capabilit|what (?:it|this) does|scope", re.I)
 _NOT_HEAD = re.compile(r"\bnot\b|don'?t|avoid|limitation|out of scope|anti", re.I)
 _WHEN_LINE = re.compile(r"^\s*(?:[-*]\s*)?(?:use (?:this|it|when|for)|triggers?(?: on)?:|invoke (?:for|when)|when (?:the )?user)", re.I)
 
 
+_CONCEPTS = None
+
+
+def concepts():
+    global _CONCEPTS
+    if _CONCEPTS is None:
+        import json
+        _CONCEPTS = []
+        try:
+            with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data",
+                                   "concepts.json"), encoding="utf-8") as f:
+                for pat, terms in json.load(f).get("concepts", []):
+                    _CONCEPTS.append((re.compile(pat, re.I), terms))
+        except (OSError, ValueError, re.error):
+            pass
+    return _CONCEPTS
+
+
+def concept_expand(task):
+    """Translate everyday phrasing into the terms skill descriptions use
+    ('hammered by bots trying passwords' -> brute force attack authentication security).
+    Returns (text with matched phrases replaced by their terms, set of concept tokens)."""
+    found = []
+    for rx, terms in concepts():
+        for m in rx.finditer(task):
+            found.append((m.start(), m.end(), terms))
+    spans = []
+    for s0, e0, terms in sorted(found, key=lambda x: -(x[1] - x[0])):   # longest phrase wins
+        if not any(s0 < e and s < e0 for s, e, _ in spans):
+            spans.append((s0, e0, terms))
+    if not spans:
+        return task, set()
+    spans.sort()
+    out, last, ctoks = [], 0, set()
+    for s0, e0, terms in spans:
+        out.append(task[last:s0])
+        out.append(" %s " % terms)
+        ctoks.update(srlib.tokens(terms))
+        last = e0
+    out.append(task[last:])
+    return re.sub(r"\s+", " ", "".join(out)).strip(), ctoks
+
+
+# suggested chaining order: direction and planning, then implementation, then testing and review
+STAGE = {"process-workflow": 0, "design-frontend": 0, "testing-quality": 2, "security": 2}
+
+
+_DICT = None
+
+
+def _in_dict(w):
+    global _DICT
+    if _DICT is None:
+        _DICT = b""
+        for path in ("/usr/share/dict/words", "/usr/dict/words"):
+            try:
+                with open(path, "rb") as f:
+                    _DICT = b"\n" + f.read().lower() + b"\n"   # one blob: ~6 ms, membership by search
+                break
+            except OSError:
+                continue
+    return bool(_DICT) and (b"\n" + w.encode("ascii", "ignore") + b"\n") in _DICT
+
+
+def english_word(w):
+    """True when w (or w minus a common inflection) is in the system word list, if any."""
+    if _in_dict(w):
+        return True
+    for suf, rep in (("ing", ""), ("ing", "e"), ("ed", ""), ("ed", "e"), ("es", ""), ("s", ""), ("ies", "y")):
+        if w.endswith(suf) and len(w) > len(suf) + 2 and _in_dict(w[: -len(suf)] + rep):
+            return True
+    if w.endswith("ing") and len(w) > 6 and w[-4] == w[-5] and _in_dict(w[:-4]):
+        return True   # spamming -> spam
+    return False
+
+
+def _transposed(a, b):
+    if len(a) != len(b):
+        return False
+    diff = [i for i in range(len(a)) if a[i] != b[i]]
+    return len(diff) == 2 and diff[1] == diff[0] + 1 and a[diff[0]] == b[diff[1]] and a[diff[1]] == b[diff[0]]
+
+
 def fix_typos(task, idf):
-    """Replace unknown words with a close index term ('screnshot' -> 'screenshot')."""
+    """Replace misspelled words with a close index term ('screnshot' -> 'screenshot',
+    'wirte' -> 'write'). Real English words are never 'corrected'."""
     vocab = None
     out = []
     for word in re.findall(r"[A-Za-z][A-Za-z0-9.+#-]*|[^A-Za-z]+", task):
         w = word.lower()
-        if len(w) >= 5 and w.isalpha():
+        if len(w) >= 4 and w.isalpha() and w not in srlib.STOPWORDS:
             st = srlib.stem(w)
-            if st not in idf and w not in srlib.STOPWORDS:
+            if st not in idf and not english_word(w):
                 if vocab is None:
                     vocab = [k for k in idf if k.isalpha() and len(k) >= 4]
-                # typos rarely hit the first two letters: compare within that slice only
-                m = difflib.get_close_matches(st, [k for k in vocab if k[:2] == st[:2]], n=1, cutoff=0.75)
-                if m:
-                    out.append(m[0])
+                swap = [k for k in vocab if _transposed(st, k)]
+                if swap:
+                    out.append(swap[0])
                     continue
+                if len(w) >= 6:
+                    m = difflib.get_close_matches(st, [k for k in vocab if k[:3] == st[:3]], n=1, cutoff=0.8)
+                    if m:
+                        out.append(m[0])
+                        continue
         out.append(word)
     return "".join(out)
 
@@ -82,13 +171,14 @@ def purpose(s):
     return first
 
 
-def deep_hint(task, results, idx, used, q=None):
-    """results: normal scorer output for the task text (sorted). Returns hint text."""
+def deep_hint(task, results, idx, used, q=None, concept_toks=frozenset()):
+    """results: normal scorer output for the (concept-expanded) task text, sorted."""
     idf = idx["idf"]
     common = set(idx.get("common") or ())
     qtoks = set(srlib.tokens(task)) | set(srlib.intent_terms(task)) | set(srlib.expand(srlib.tokens(task), task))
+    own = qtoks - set(concept_toks)
     specific = set(t for t in qtoks if t not in srlib.WEAK)
-    rare = specific - common          # words that can carry a deep match on their own
+    rare = (specific - common) | (set(concept_toks) - srlib.WEAK)   # words that can carry a deep match
     tbig = srlib.bigrams(srlib.tokens(task))
     pool = []
     seen = set()
@@ -117,7 +207,7 @@ def deep_hint(task, results, idx, used, q=None):
         bonus = 0.0
         hits = set()
         for t in specific:
-            w = min(idf.get(t, 2.0), 4.5) * (0.5 if t in common else 1.0)
+            w = min(idf.get(t, 2.0), 4.5) * (0.5 if t in common else 1.0) * (1.0 if t in own else CONCEPT_WEIGHT)
             if wtf.get(t):
                 bonus += w * (1.0 + math.log(wtf[t])) * 0.8
                 hits.add(t)
@@ -158,8 +248,10 @@ def deep_hint(task, results, idx, used, q=None):
         picks.append(x)
         if len(picks) >= MAX_NAMES:
             break
-    head = ("skill-router deep: you asked to use relevant skills. Invoke the ones below that genuinely fit "
-            "this request via the Skill tool before starting, and skip the rest:")
+    picks.sort(key=lambda x: (STAGE.get(x[2].get("category"), 1), -x[0]))
+    head = ("skill-router deep: you asked to use relevant skills. Load every skill below that fits this request "
+            "via the Skill tool before starting. If several fit, chain them in the listed order (direction and "
+            "planning, then implementation, then testing and review); skip any that do not fit:")
     lines = []
     for _, name, s in picks:
         mark = " (already used this session)" if name in used or s["name"] in used else ""

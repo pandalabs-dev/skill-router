@@ -35,8 +35,7 @@ DEFAULTS = {
                                               "fewer tokens", "less tokens", "token-efficient"]}},
     # phrases that switch on deep mode for one prompt (case-insensitive, anywhere)
     "deep_triggers": ["use necessary skills", "use the necessary skills", "use relevant skills",
-                      "use the relevant skills", "use any relevant skills", "use skills", "use my skills",
-                      "use the right skills", "use your skills", "find skills for this", "+skills"],
+                      "use the relevant skills", "use the right skills", "find skills for this", "+skills"],
     "debug": False,
 }
 HARD_MAX_K = 5
@@ -130,7 +129,15 @@ def prompt_size(prompt):
     return len([w for w in re.findall(r"[A-Za-z0-9][\w.+#-]*", prompt.lower()) if w not in FILLER])
 
 
-_NEGATION = re.compile(r"(?:\bdon'?t|\bdo not|\bnever|\bno need to|\bwithout|\bnot|\bno)\W+(?:\w+\W+){0,2}$", re.I)
+# a negation in the same clause, right before the trigger ('don't use relevant skills');
+# a comma or full stop ends the clause ('works sometimes and sometimes not, find skills for this')
+_NEGATION = re.compile(r"(?:\bdon'?t|\bdo not|\bnever|\bno need to|\bwithout|\bnot|\bno)[ \t]+(?:[\w']+[ \t]+){0,2}$", re.I)
+
+
+# 'don't use skills', 'without skills', 'no skills': the user wants no hint at all
+NO_SKILLS = re.compile(r"\b(?:don'?t|do not|never|no need to|please don'?t)\s+(?:use|load|invoke|apply|suggest)\s+"
+                       r"(?:\w+\s+){0,2}skills?\b|\bwithout (?:\w+\s+){0,2}skills?\b|\bno skills?\b|"
+                       r"\bskip (?:the |any )?skills?\b|\bskills? (?:off|disabled)\b", re.I)
 
 
 def deep_trigger(prompt, triggers):
@@ -700,6 +707,8 @@ def run(payload, ddir=None, persist=True):
     prompt = payload.get("prompt") or ""
     if not isinstance(prompt, str):
         return None
+    if NO_SKILLS.search(prompt):
+        return None   # explicitly no skills for this prompt: no deep hint, no normal hint
     cfg = load_config(ddir)
     task = None
     if prompt.strip()[:1] not in ("/", "!", "#"):
@@ -757,6 +766,7 @@ def run_deep(task, payload, cfg, ddir, persist):
     import deep
     idx = load_index(ddir)
     task = deep.fix_typos(task, idx["idf"])
+    task, concept_toks = deep.concept_expand(task)
     cwd = payload.get("cwd") or ""
     routes = load_json(os.path.join(os.path.dirname(HERE), "routes.json"), {}) or {}
     ALTERNATIVES[:] = [set(a) for a in routes.get("alternatives", [])]
@@ -776,7 +786,7 @@ def run_deep(task, payload, cfg, ddir, persist):
     results = score_all(task, idx, signals, extra, platforms, muted, q)
     # relaxed: platform-gated and wrong-direction candidates stay in the pool, scored lower
     results = [r for r in results if r[1]["name"] not in cfg["exclude"]]
-    text = deep.deep_hint(task, results, idx, set(state.get("used", [])), q)
+    text = deep.deep_hint(task, results, idx, set(state.get("used", [])), q, concept_toks)
     if persist:
         try:
             os.makedirs(os.path.dirname(sp), exist_ok=True)

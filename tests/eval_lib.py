@@ -153,18 +153,21 @@ def metrics(h, data=None):
     return out
 
 
-def deep_metrics(h, data=None):
+def deep_metrics(h, data=None, split="deep"):
     """Deep mode vs normal mode on the same task text."""
     data = data or load_set()
     out = {"n": 0, "deep_hit": 0, "normal_hit": 0, "nomatch_ok": 0, "nomatch_n": 0, "chars": [], "misses": []}
-    for it in data.get("deep", []):
+    for it in data.get(split, []):
         prompt = "%s, %s" % (it["task"], it["trigger"]) if not it["trigger"].startswith("+") else "%s %s" % (it["trigger"], it["task"])
         text = route.run({"prompt": prompt, "cwd": h.dirs["plain"], "session_id": "deep"}, ddir=h.ddir, persist=False) or ""
         out["chars"].append(len(text))
         names = [l[2:].split(": ", 1)[0].split(" (", 1)[0] for l in text.splitlines() if l.startswith("- ")]
         if not it["accept"]:
             out["nomatch_n"] += 1
-            out["nomatch_ok"] += ("no installed skill clearly matches" in text)
+            ok = "no installed skill clearly matches" in text
+            out["nomatch_ok"] += ok
+            if not ok:
+                out["misses"].append((prompt, names or ["(expected no-match)"]))
             continue
         if not (set(it["accept"]) & h.names):
             continue
@@ -217,13 +220,14 @@ def main():
         print("everyday n=%d fire=%.0f%% avg_chars=%.1f max_chars=%d" % (e["n"], e["fire"] * 100, e["avg_chars"], e["max_chars"]))
         print("all      n=%d avg_chars=%.1f max_chars=%d names_per_hint=%.2f" % (
             m["all"]["n"], m["all"]["avg_chars"], m["all"]["max_chars"], m["names_per_hint"]))
-        dm = deep_metrics(h)
-        print("deep     n=%d hit@5 deep=%.0f%% normal(same task)=%.0f%% no-match ok=%d/%d avg_chars=%.0f max_chars=%d" % (
+        for split in (("deep", "deep_holdout") if "--holdout" in sys.argv else ("deep",)):
+          dm = deep_metrics(h, split=split)
+          print(split + " n=%d hit@5 deep=%.0f%% normal(same task)=%.0f%% no-match ok=%d/%d avg_chars=%.0f max_chars=%d" % (
             dm["n"], 100.0 * dm["deep_hit"] / (dm["n"] or 1), 100.0 * dm["normal_hit"] / (dm["n"] or 1),
             dm["nomatch_ok"], dm["nomatch_n"], sum(dm["chars"]) / float(len(dm["chars"]) or 1), max(dm["chars"] or [0])))
-        if "-v" in sys.argv:
+          if "-v" in sys.argv:
             for p, n in dm["misses"]:
-                print("DEEPMISS %s -> %s" % (p, n))
+                print("DEEPMISS %s %s -> %s" % (split, p, n))
         dmed, dmx = latency_ms(h, ["make the hero section feel minimal and calm, use necessary skills",
                                    "full table scan is slow, use relevant skills"])
         print("deep latency median=%.0f ms max=%.0f ms" % (dmed, dmx))

@@ -1890,7 +1890,7 @@
     },
     {
       "task": "how do we rank higher on Google for payment gateway",
-      "trigger": "use my skills",
+      "trigger": "use necessary skills",
       "accept": [
         "seo",
         "seo-plan",
@@ -1910,7 +1910,7 @@
     },
     {
       "task": "our pages vanished from google results",
-      "trigger": "use skills",
+      "trigger": "use relevant skills",
       "accept": [
         "seo-technical",
         "seo-google",
@@ -1956,7 +1956,7 @@
     },
     {
       "task": "build a dashboard chart for weekly signups",
-      "trigger": "use skills",
+      "trigger": "use relevant skills",
       "accept": [
         "dataviz"
       ]
@@ -1988,7 +1988,7 @@
     },
     {
       "task": "review my PR before I merge it",
-      "trigger": "use my skills",
+      "trigger": "use necessary skills",
       "accept": [
         "code-reviewer",
         "code-review",
@@ -2005,7 +2005,7 @@
     },
     {
       "task": "generate an OG image for the blog",
-      "trigger": "use skills",
+      "trigger": "use relevant skills",
       "accept": [
         "seo-image-gen",
         "higgsfield-generate"
@@ -2036,7 +2036,7 @@
     },
     {
       "task": "build an mcp server for our crm",
-      "trigger": "use skills",
+      "trigger": "use relevant skills",
       "accept": [
         "mcp-developer"
       ]
@@ -2058,7 +2058,7 @@
     },
     {
       "task": "write a cover letter as a word doc",
-      "trigger": "use my skills",
+      "trigger": "use necessary skills",
       "accept": [
         "anthropic-skills:docx"
       ]
@@ -2072,7 +2072,7 @@
     },
     {
       "task": "plan the architecture for a multi-tenant SaaS",
-      "trigger": "use skills",
+      "trigger": "use relevant skills",
       "accept": [
         "architecture-designer",
         "microservices-architect",
@@ -2089,19 +2089,250 @@
     },
     {
       "task": "keep my answers short and terse",
-      "trigger": "use skills",
+      "trigger": "use relevant skills",
       "accept": [
         "caveman"
       ]
     },
     {
       "task": "tell me a joke about cats",
-      "trigger": "use skills",
+      "trigger": "use relevant skills",
       "accept": []
     },
     {
       "task": "what's the weather like tomorrow",
       "trigger": "use relevant skills",
+      "accept": []
+    },
+    {
+      "task": "stop people from spamming our signup endpoint",
+      "trigger": "use relevant skills",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "task": "someone could steal sessions via cookies",
+      "trigger": "use necessary skills",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "task": "make the website feel fancy and upscale",
+      "trigger": "+skills",
+      "accept": [
+        "high-end-visual-design",
+        "design-taste-frontend"
+      ]
+    },
+    {
+      "task": "the design looks cheap and generic",
+      "trigger": "use the right skills",
+      "accept": [
+        "design-taste-frontend",
+        "high-end-visual-design",
+        "impeccable",
+        "gpt-taste"
+      ]
+    },
+    {
+      "task": "let people log in with google on the next.js site",
+      "trigger": "use relevant skills",
+      "accept": [
+        "vercel:auth",
+        "nextjs-developer"
+      ]
+    },
+    {
+      "task": "add social login to the app",
+      "trigger": "find skills for this",
+      "accept": [
+        "vercel:auth",
+        "secure-code-guardian"
+      ]
+    },
+    {
+      "task": "answer me in fewer words from now on",
+      "trigger": "use relevant skills",
+      "accept": [
+        "caveman"
+      ]
+    },
+    {
+      "task": "talk like a caveman to save tokens",
+      "trigger": "use necessary skills",
+      "accept": [
+        "caveman"
+      ]
+    },
+    {
+      "task": "the database is slow when lots of users hit it",
+      "trigger": "+skills",
+      "accept": [
+        "database-optimizer",
+        "postgres-pro",
+        "sql-pro"
+      ]
+    },
+    {
+      "task": "nobody finds our blog on google",
+      "trigger": "use relevant skills",
+      "accept": [
+        "seo",
+        "seo-content",
+        "seo-plan"
+      ]
+    },
+    {
+      "task": "ship this to production on vercel",
+      "trigger": "use the right skills",
+      "accept": [
+        "vercel:deploy",
+        "vercel:deployments-cicd"
+      ]
+    },
+    {
+      "task": "put the app on the app store",
+      "trigger": "use relevant skills",
+      "accept": [
+        "eas-app-stores"
+      ]
+    },
+    {
+      "task": "make a word file with the contract",
+      "trigger": "use necessary skills",
+      "accept": [
+        "anthropic-skills:docx"
+      ]
+    },
+    {
+      "task": "make a spreadsheet of expenses",
+      "trigger": "+skills",
+      "accept": [
+        "anthropic-skills:xlsx"
+      ]
+    },
+    {
+      "task": "create slides for the team meeting",
+      "trigger": "use relevant skills",
+      "accept": [
+        "anthropic-skills:pptx",
+        "slides"
+      ]
+    },
+    {
+      "task": "check that nothing broke before I say it's done",
+      "trigger": "use the right skills",
+      "accept": [
+        "superpowers:verification-before-completion",
+        "verify-and-stop"
+      ]
+    },
+    {
+      "task": "the feature works sometimes and sometimes not",
+      "trigger": "find skills for this",
+      "accept": [
+        "superpowers:systematic-debugging",
+        "debugging-wizard"
+      ]
+    },
+    {
+      "task": "write end to end tests that click through the checkout",
+      "trigger": "use relevant skills",
+      "accept": [
+        "playwright-expert"
+      ]
+    },
+    {
+      "task": "set up continuous deployment with github",
+      "trigger": "use necessary skills",
+      "accept": [
+        "devops-engineer",
+        "vercel:deployments-cicd"
+      ]
+    },
+    {
+      "task": "move our servers into containers on aws",
+      "trigger": "use the right skills",
+      "accept": [
+        "devops-engineer",
+        "cloud-architect",
+        "kubernetes-specialist"
+      ]
+    },
+    {
+      "task": "make our llm answers grounded in company docs",
+      "trigger": "use relevant skills",
+      "accept": [
+        "rag-architect"
+      ]
+    },
+    {
+      "task": "call claude from our backend with tools",
+      "trigger": "use necessary skills",
+      "accept": [
+        "claude-api"
+      ]
+    },
+    {
+      "task": "make a short video ad for our product",
+      "trigger": "+skills",
+      "accept": [
+        "higgsfield-generate"
+      ]
+    },
+    {
+      "task": "draw a diagram of the system in figma",
+      "trigger": "use relevant skills",
+      "accept": [
+        "figma:figma-generate-diagram",
+        "figma:figma-use-figjam"
+      ]
+    },
+    {
+      "task": "clean up this messy function without changing what it does",
+      "trigger": "use the right skills",
+      "accept": [
+        "safe-refactor",
+        "simplify"
+      ]
+    },
+    {
+      "task": "the react app re-renders too much",
+      "trigger": "use relevant skills",
+      "accept": [
+        "react-expert",
+        "vercel:react-best-practices",
+        "vercel-react-best-practices"
+      ]
+    },
+    {
+      "task": "make our pages show rich snippets in google",
+      "trigger": "use necessary skills",
+      "accept": [
+        "seo-schema"
+      ]
+    },
+    {
+      "task": "build a REST api for orders with good docs",
+      "trigger": "find skills for this",
+      "accept": [
+        "api-designer"
+      ]
+    },
+    {
+      "task": "what's a good name for my cat",
+      "trigger": "use relevant skills",
+      "accept": []
+    },
+    {
+      "task": "summarize the plot of hamlet",
+      "trigger": "+skills",
       "accept": []
     }
   ],

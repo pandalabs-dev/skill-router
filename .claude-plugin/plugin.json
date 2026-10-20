@@ -1,6 +1,6 @@
 {
   "name": "skill-router",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Names the few installed skills that fit each prompt (silent by default, at most 5 names, once per session) so the model loads only what it needs.",
   "author": {
     "name": "Andrija Peric"

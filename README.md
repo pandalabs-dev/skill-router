@@ -32,7 +32,7 @@ claude plugin marketplace remove skill-router   # uninstall also deletes the ind
 
 ## Deep mode
 
-Add "use necessary skills" (or "use relevant skills", "use my skills", "+skills") to a prompt and the router searches wider: about 30 candidates, re-ranked by reading each one's full SKILL.md. It then tells Claude to invoke the skills that fit, up to 5, or says that none match. It runs locally in about 0.1 s, only when asked; "don't use skills" never triggers it. Phrases are configurable as `deep_triggers`.
+Add "use necessary skills", "use relevant skills", "use the right skills", "find skills for this" or "+skills" to a prompt. The router then searches wider: it translates everyday phrasing into technical terms, fixes typos, and re-ranks about 30 candidates by reading each full SKILL.md. Claude is told to load every skill that fits (up to 5), in order: planning and design, then implementation, then testing. If nothing fits, it is told none match. Deep mode runs locally in about 0.15 s. "Don't use skills", "without skills" and "no skills" silence all hints for that prompt. The phrases are configurable as `deep_triggers`.
 
 ## Config
 

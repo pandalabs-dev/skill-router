@@ -17,6 +17,7 @@ sys.path.insert(0, SCRIPTS)
 import srlib  # noqa: E402
 import build_index  # noqa: E402
 import route  # noqa: E402
+import deep as deep_mod  # noqa: E402
 
 TMP = tempfile.mkdtemp(prefix="skill-router-test-")
 CWD = os.path.expanduser("~")  # neutral directory: no project signals
@@ -349,6 +350,30 @@ class DeepModeTests(unittest.TestCase):
                   "which skills are installed?", "list my skills", "add error handling to the fetch call"]:
             with self.subTest(p=p):
                 self.assertIsNone(route.deep_trigger(p, self.TRIG))
+
+    def test_broad_phrases_do_not_trigger(self):
+        for p in ["our agents use skills from the catalog", "users use my skills page to browse",
+                  "the bot can use skills when it needs them"]:
+            with self.subTest(p=p):
+                self.assertIsNone(route.deep_trigger(p, self.TRIG))
+
+    def test_negation_silences_everything(self):
+        for p in ["don't use skills, what is a seq scan", "without skills: optimize this slow SQL query",
+                  "no skills please, write a postgres migration adding an index",
+                  "do not use any skills, add the STRIPE_KEY env var to the vercel project"]:
+            with self.subTest(p=p):
+                self.assertIsNone(suggest(p))
+        # ordinary prompts are unaffected
+        if "sql-pro" in NAMES:
+            self.assertIsNotNone(suggest("optimize this slow SQL query, it takes 4 seconds"))
+
+    def test_deep_instruction_and_order(self):
+        text = suggest("design a minimal landing page and then write playwright tests for it, use necessary skills")
+        self.assertIn("chain them in the listed order", text)
+        names = [l[2:].split(": ", 1)[0].split(" (", 1)[0] for l in text.splitlines() if l.startswith("- ")]
+        by = {s["name"]: s for s in INDEX["skills"]}
+        stages = [deep_mod.STAGE.get(by[n].get("category"), 1) for n in names if n in by]
+        self.assertEqual(stages, sorted(stages))
 
     def test_deep_output(self):
         text = suggest("tell me a joke about cats, use relevant skills")
