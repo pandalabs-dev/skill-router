@@ -210,6 +210,50 @@ class MatchingFeatureTests(unittest.TestCase):
             self.assertIn("eas-app-stores", names_in(suggest("upload the build to testflight")))
 
 
+class FixRuleTests(unittest.TestCase):
+    """0.2.1 rules: conversion targets, query-performance signals, opt-in families, language evidence."""
+
+    def proj(self, files):
+        d = tempfile.mkdtemp(dir=TMP)
+        for fn, content in files.items():
+            with open(os.path.join(d, fn), "w") as f:
+                f.write(content)
+        return d
+
+    def test_conversion_classes(self):
+        d = srlib.directional("translate this Figma mockup into a Next.js page")
+        self.assertIn("to:@code", d)
+        self.assertIn("from:@design", d)
+        self.assertIn("to:@design", srlib.directional("push my React login screen into Figma"))
+        self.assertIn("from:@visual", srlib.directional("convert this screenshot into HTML and CSS"))
+        self.assertEqual(srlib.name_conversion("image-to-code"), [["@visual"], ["@code"]])
+
+    def test_query_perf_only_for_sql_explain(self):
+        perf = srlib.expand(srlib.tokens("look at the EXPLAIN output"), "look at the EXPLAIN output")
+        self.assertIn("query", perf)
+        self.assertEqual(srlib.expand(srlib.tokens("explain this to me"), "explain this to me"), [])
+        self.assertIsNone(suggest("explain this to me"))
+        self.assertIsNone(suggest("can you explain how this function works step by step"))
+
+    def test_opt_in_family(self):
+        if "caveman-commit" not in NAMES:
+            self.skipTest("caveman skills not installed")
+        self.assertNotIn("caveman-commit", names_in(suggest("write a commit message for this")))
+        self.assertIn("caveman-commit", names_in(suggest("write a terse caveman commit message")))
+
+    def test_language_evidence(self):
+        if "python-pro" not in NAMES:
+            self.skipTest("python-pro not installed")
+        self.assertNotIn("python-pro", names_in(suggest("add error handling to the fetch call")))
+        py = self.proj({"pyproject.toml": "[project]\nname='x'\n"})
+        plats = route.resolve_platforms({"lang-python"}, set(), json.load(open(os.path.join(ROOT, "routes.json"))))
+        self.assertIn("lang-python", plats)
+        # contradictory: project says python, prompt says typescript -> python not in force
+        routes = json.load(open(os.path.join(ROOT, "routes.json")))
+        self.assertNotIn("lang-python", route.resolve_platforms({"lang-python"}, {"lang-typescript"}, routes))
+        self.assertTrue(os.path.isdir(py))
+
+
 class ParserTests(unittest.TestCase):
     def test_frontmatter_variants(self):
         cases = {

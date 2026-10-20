@@ -1,5 +1,5 @@
 {
-  "_comment": "rules: project-file signals that nudge skills (never fire alone). platforms: skills that only get full weight when the prompt names the platform or the project shows it.",
+  "_comment": "rules: project-file signals that nudge skills (never fire alone). platforms: skills that stay quiet unless the prompt or project shows the platform; kind=language needs language evidence and yields to a different language named in the prompt; suppresses: skills muted when the prompt names this platform.",
   "rules": [
     {"deps": ["expo", "expo-router", "react-native"], "files": ["app.json", "eas.json"], "skills": ["expo-router", "expo-native-ui", "expo-project-structure", "eas-workflows", "eas-app-stores", "react-native-expert", "expo-dev-client", "expo-upgrade", "expo-ui"], "weight": 1.0},
     {"deps": ["next"], "files": ["next.config.js", "next.config.mjs", "next.config.ts"], "skills": ["nextjs-developer", "vercel:nextjs", "vercel:next-cache-components", "vercel:next-upgrade"], "weight": 1.0},
@@ -33,9 +33,20 @@
     "vercel-libs": {"skills": ["vercel:ai-sdk", "vercel:chat-sdk", "vercel:flags-sdk", "vercel:workflow", "vercel:shadcn", "vercel:ai-gateway"], "prompt": ["vercel", "ai sdk", "chat sdk", "flags sdk", "feature flag", "workflow", "shadcn", "ai gateway"], "deps": ["ai", "@ai-sdk/*", "chat", "flags", "workflow"], "files": ["vercel.json", ".vercel", "components.json"]},
     "vercel": {"skills": ["vercel:*"], "prompt": ["vercel"], "files": ["vercel.json", ".vercel"]},
     "expo": {"skills": ["expo-*", "eas-*"], "prompt": ["expo", "eas", "react native", "react-native", "testflight", "app store", "play store", "google play", "ios", "android", "simulator", "native"], "deps": ["expo", "react-native"], "files": ["eas.json"]},
-    "figma": {"skills": ["figma:*"], "prompt": ["figma", "figjam"]},
+    "figma": {"skills": ["figma:*"], "prompt": ["figma", "figjam"], "suppresses": ["image-to-code", "imagegen-frontend-*"]},
     "higgsfield": {"skills": ["higgsfield-*"], "prompt": ["higgsfield", "video", "image", "photo", "photoshoot", "3d", "ugc", "animate"]},
     "shopify": {"skills": ["shopify-expert"], "prompt": ["shopify", "liquid"], "files": ["shopify.theme.toml", "shopify.app.toml"]},
-    "salesforce": {"skills": ["salesforce-developer"], "prompt": ["salesforce", "apex", "lwc", "soql"], "files": ["sfdx-project.json"]}
+    "salesforce": {"skills": ["salesforce-developer"], "prompt": ["salesforce", "apex", "lwc", "soql"], "files": ["sfdx-project.json"]},
+    "lang-python": {"kind": "language", "skills": ["python-pro"], "prompt": ["python", "pip", "pytest", "django", "fastapi", "flask", "pandas", "numpy", "pydantic", "asyncio", "poetry", "uv", "virtualenv", "venv", ".py"], "files": ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile", "*.py"]},
+    "lang-javascript": {"kind": "language", "skills": ["javascript-pro"], "prompt": ["javascript", "js", "node", "nodejs", "npm", "es6", "esm", "commonjs", "deno", "bun"], "files": ["package.json"]},
+    "lang-typescript": {"kind": "language", "skills": ["typescript-pro", "typescript-advanced-types"], "prompt": ["typescript", "ts", "tsx", "tsconfig", "generic", "generics", "type-safe", "zod"], "files": ["tsconfig.json"]},
+    "lang-go": {"kind": "language", "skills": ["golang-pro"], "prompt": ["golang", "goroutine", "goroutines", "gin", "go.mod"], "files": ["go.mod"]},
+    "lang-rust": {"kind": "language", "skills": ["rust-engineer"], "prompt": ["rust", "cargo", "crate", "crates", "tokio", "borrow checker", "lifetime", "lifetimes", "serde"], "files": ["Cargo.toml"]},
+    "lang-php": {"kind": "language", "skills": ["php-pro"], "prompt": ["php", "composer", "laravel", "symfony", "wordpress", "woocommerce"], "files": ["composer.json", "wp-config.php"]},
+    "lang-csharp": {"kind": "language", "skills": ["csharp-developer"], "prompt": ["c#", "csharp", ".net", "dotnet", "asp.net", "ef core", "linq", "blazor", "maui", "nuget"], "files": ["*.csproj", "*.sln"]},
+    "lang-java": {"kind": "language", "skills": ["java-architect"], "prompt": ["java", "jvm", "maven", "gradle", "spring", "hibernate", "jakarta"], "files": ["pom.xml", "build.gradle"]},
+    "lang-kotlin": {"kind": "language", "skills": ["kotlin-specialist"], "prompt": ["kotlin", "coroutine", "coroutines", "ktor", "jetpack compose", "android"], "files": ["build.gradle.kts", "settings.gradle.kts"]},
+    "lang-swift": {"kind": "language", "skills": ["swift-expert"], "prompt": ["swift", "swiftui", "uikit", "xcode", "ios", "macos", "combine"], "files": ["Package.swift", "*.xcodeproj"]},
+    "lang-cpp": {"kind": "language", "skills": ["cpp-pro"], "prompt": ["c++", "cpp", "cmake", "stl", "clang", "gcc"], "files": ["CMakeLists.txt", "*.cpp", "*.hpp"]}
   }
 }

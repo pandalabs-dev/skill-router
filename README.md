@@ -22,7 +22,7 @@ Uninstall deletes the plugin's data directory (index and session state) unless y
 
 ## Token budget
 
-- Silent by default: a hint appears only on a confident match. On the bundled everyday sample it fires on 28% of prompts.
+- Silent by default: a hint appears only on a confident match. On the bundled everyday sample it fires on 25% of prompts.
 - One line of at most 400 characters and at most 5 names. Extra names must score at least half of the top hit, so most hints carry 1 to 2 names. Only the first two names may carry a short description, and only when the name shares no word with the prompt.
 - Each skill is suggested once per session, and never after the transcript shows it was already used.
 - The `SessionStart` hook only rebuilds a stale index and prints nothing.
@@ -31,8 +31,8 @@ Uninstall deletes the plugin's data directory (index and session state) unless y
 
 - A BM25 index over every skill description. It covers user skills, enabled plugins, synced plugins and project `.claude/skills`, plus a static list of built-in skills (`builtin_skills.json`) that may drift from what your build offers.
 - Name and trigger-phrase hits, bigrams and a small alias table (`k8s`, `tf`, `gh actions`, `pg`, `tdd`, ...) boost a skill. A rare tech word at the start of a skill's name beats generic skills (`postgres-pro` over `migration`).
-- Direction words split conversions (`page into Figma` vs `Figma into code`), and "NOT for:" clauses in descriptions count against a skill.
-- Platform skills (`vercel:*`, `expo-*`/`eas-*`, `figma:*`, `higgsfield-*`, `shopify-expert`) stay quiet unless the prompt or the project shows that platform. `routes.json` holds the project-file signals.
+- What follows `into`/`to`/`as` sets the direction: a code target (Next.js, React, HTML, SwiftUI, component, page) means design to code, and Figma/FigJam means code to design. A screenshot, mockup or image turned into code goes to `image-to-code`; naming Figma routes to the Figma skills instead. "NOT for:" clauses in descriptions count against a skill.
+- Platform skills (`vercel:*`, `expo-*`/`eas-*`, `figma:*`, `higgsfield-*`, `shopify-expert`) and language skills (`python-pro`, `typescript-pro`, `golang-pro`, ...) stay quiet unless the prompt or the project shows that platform or language. If the prompt names a different language from the project, they stay quiet. Style families such as `caveman-*` fire only when the prompt names them. Uppercase `EXPLAIN`, "query plan" and "seq scan" signal query performance; a lowercase "explain this" does not.
 - Prompts under 4 meaningful words fire only on a rare, specific hit. Continuations ("ok", "go on", "do it") never fire.
 
 ## Config
@@ -40,10 +40,10 @@ Uninstall deletes the plugin's data directory (index and session state) unless y
 Optional `config.json` in the data directory (`~/.claude/plugins/data/skill-router-skill-router/`):
 
 ```json
-{ "top_k": 5, "min_score": 9, "rel_cutoff": 0.5, "max_chars": 400, "exclude": [], "builtins": "auto", "debug": false }
+{ "top_k": 5, "min_score": 9, "rel_cutoff": 0.5, "max_chars": 400, "exclude": [], "builtins": "auto", "opt_in_families": ["myteam"], "debug": false }
 ```
 
-`builtins` takes `"auto"`, `true` or `false`. With `"auto"`, the anthropic-skills entries are indexed only when you are logged in with a claude.ai account.
+`opt_in_families` adds to the default `caveman` family: `"name"` mutes `name*` skills unless the prompt says `name`. A dict form `{"name": {"skills": [...], "words": [...]}}` is also accepted. `builtins` takes `"auto"`, `true` or `false`. With `"auto"`, the anthropic-skills entries are indexed only when you are logged in with a claude.ai account.
 
 ## Tests
 

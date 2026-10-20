@@ -216,6 +216,7 @@ def from_description(entry, desc):
         "phrases": sorted(phrases),
         "bigrams": sorted(srlib.bigrams(desc_toks)),
         "dir": srlib.directional(pos),
+        "conv": srlib.name_conversion(base),
         "neg": sorted(neg_toks),
         "tf": tf,
         "dl": len(desc_toks),

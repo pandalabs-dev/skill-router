@@ -2,7 +2,7 @@
 import os
 import re
 
-INDEX_VERSION = 4
+INDEX_VERSION = 5
 
 HOME = os.path.expanduser("~")
 
@@ -87,11 +87,21 @@ EXPANSIONS = {
     "nondeterministic": ("bug", "debug"), "exception": ("error", "bug"),
     "testflight": ("app store", "ios"), "spreadsheet": ("excel",), "deck": ("slides", "presentation"),
     "pitch": ("presentation",), "chart": ("visualization",), "graph": ("visualization",),
+    "screenshot": ("image",), "screenshots": ("image",), "wireframe": ("image",), "mockup": ("image",),
+    "picture": ("image",),
 }
 PHRASE_EXPANSIONS = {
     "root cause": ("bug", "debug"), "stack trace": ("error", "debug"),
     "fails randomly": ("bug", "debug"), "github actions": ("ci", "pipeline"),
+    "takes so long": ("slow", "performance"), "take so long": ("slow", "performance"),
 }
+
+# Query-performance signals. Uppercase EXPLAIN is the SQL command; lowercase
+# "explain this" is conversation and must not match.
+QUERY_PERF = (re.compile(r"\bEXPLAIN\b|\bexplain (?:analy[sz]e|plan)\b|\bquery plans?\b|\bslow quer(?:y|ies)\b|"
+                         r"\bexecution plans?\b|\b(?:seq|sequential|index|bitmap heap) scans?\b", re.I),
+              re.compile(r"\bEXPLAIN\b"))
+QUERY_PERF_TERMS = ("query", "performance", "slow", "optimize", "execution plan", "index", "database")
 
 
 def stem(w):
@@ -163,6 +173,10 @@ def expand(toks, text):
         if ph in low:
             for a in adds:
                 extra.extend(tokens(a))
+    m = QUERY_PERF[0].search(text)
+    if m and (m.group(0).lower() != "explain" or QUERY_PERF[1].search(text)):
+        for a in QUERY_PERF_TERMS:
+            extra.extend(tokens(a))
     have = set(toks)
     return [t for t in extra if t not in have]
 
@@ -190,6 +204,14 @@ def norm_phrase(text):
 
 
 DIR_TO = {"into", "to", "in", "onto", "as"}
+# Classes of what sits on either side of a conversion. What follows into/to/as
+# decides the direction: a code target means design->code, a design tool means code->design.
+CODE_TARGETS = set("code nextjs next react html css swiftui swift component components page pages vue svelte "
+                   "tailwind jsx tsx flutter compose frontend website web app view views kotlin android ios "
+                   "angular markup".split())
+DESIGN_TARGETS = set("figma figjam canva".split())
+VISUAL_SOURCES = set("screenshot screenshots mockup mockups image images picture pictures wireframe "
+                     "wireframes png jpg jpeg photo photos sketch comp".split())
 DIR_FROM = {"from"}
 _DIR_SKIP = set("a an the this that these those my our your its their some new".split())
 
@@ -198,11 +220,20 @@ def directional(text):
     """Direction features: 'page into Figma' -> to:figma, from:page; 'from code' -> from:code.
 
     Used to separate e.g. code->design skills from design->code skills."""
-    seq = [t for t in raw_tokens(text) if t not in _DIR_SKIP]
+    seq = [t for t in raw_tokens(rewrite(text)) if t not in _DIR_SKIP and t not in ("and", "or")]
     out = {}
 
-    def add(k):
+    def add(k, raw=None):
         out[k] = out.get(k, 0) + 1
+        if raw is None:
+            return
+        side = k.split(":", 1)[0]
+        if raw in CODE_TARGETS:
+            out[side + ":@code"] = out.get(side + ":@code", 0) + 1
+        if raw in DESIGN_TARGETS:
+            out[side + ":@design"] = out.get(side + ":@design", 0) + 1
+        if raw in VISUAL_SOURCES and side == "from":
+            out["from:@visual"] = out.get("from:@visual", 0) + 1
 
     for i, t in enumerate(seq):
         if t in DIR_TO:
@@ -210,19 +241,43 @@ def directional(text):
                 if x in DIR_TO or x in DIR_FROM:
                     break
                 if x not in STOPWORDS or x in ("code",):
-                    add("to:" + stem(ALIASES.get(x, x)))
+                    add("to:" + stem(ALIASES.get(x, x)), x)
             for x in seq[max(0, i - 2):i][::-1]:
                 if x in DIR_TO or x in DIR_FROM:
                     break
                 if x not in STOPWORDS:
-                    add("from:" + stem(ALIASES.get(x, x)))
+                    add("from:" + stem(ALIASES.get(x, x)), x)
         elif t in DIR_FROM:
             for x in seq[i + 1:i + 3]:
                 if x in DIR_TO or x in DIR_FROM:
                     break
                 if x not in STOPWORDS:
-                    add("from:" + stem(ALIASES.get(x, x)))
+                    add("from:" + stem(ALIASES.get(x, x)), x)
     return out
+
+
+def classify(word):
+    w = word.lower()
+    out = set()
+    if w in CODE_TARGETS:
+        out.add("@code")
+    if w in DESIGN_TARGETS:
+        out.add("@design")
+    if w in VISUAL_SOURCES:
+        out.add("@visual")
+    return out
+
+
+def name_conversion(base):
+    """'image-to-code' -> ({'@visual'}, {'@code'}); None when the name is not an X-to-Y conversion."""
+    if "-to-" not in base:
+        return None
+    left, right = base.split("-to-", 1)
+    src = set().union(*[classify(w) for w in left.split("-")]) if left else set()
+    dst = set().union(*[classify(w) for w in right.split("-")]) if right else set()
+    if src and dst:
+        return [sorted(src), sorted(dst)]
+    return None
 
 
 def bigrams(toks):

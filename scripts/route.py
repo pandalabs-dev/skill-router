@@ -8,6 +8,7 @@ every error path exits 0 silently.
 Budget design: silent by default, capped output (<= 400 chars, <= 5 names), and each skill is
 suggested at most once per session.
 """
+import fnmatch
 import json
 import math
 import os
@@ -28,6 +29,10 @@ DEFAULTS = {
     "desc_chars": 60,    # fragment for the first 1-2 names, only when the name is ambiguous
     "exclude": [],
     "builtins": "auto",  # index builtin_skills.json: "auto" | true | false
+    # style/mode skill families suggested only when the prompt names the family
+    "opt_in_families": {"caveman": {"skills": ["caveman*", "cavecrew*"],
+                                    "words": ["caveman", "cavecrew", "terse", "compress", "compressed",
+                                              "fewer tokens", "less tokens", "token-efficient"]}},
     "debug": False,
 }
 HARD_MAX_K = 5
@@ -36,6 +41,7 @@ K1, B = 1.2, 0.75
 SPECIALISATION_PENALTY = 0.6   # domain-named skill, domain absent from prompt and project
 PLATFORM_PENALTY = 0.5         # platform skill (vercel:*, expo-*, figma:*) without platform evidence
 NEGATIVE_PENALTY = 0.45        # prompt hits the skill's "NOT for:" clause
+CLASS_WEIGHT = 4.0             # weight of a matching conversion class (@code / @design / @visual)
 WRONG_DIRECTION_PENALTY = 0.6  # e.g. prompt goes code->Figma, skill goes Figma->code
 VERY_RARE_IDF = 99.0  # disabled: common English words are rare in descriptions too
 FIELD_RATIO = 0.9              # first pick must be within 90% of the best raw score (else ambiguous)
@@ -74,6 +80,15 @@ def load_config(ddir):
         cfg["top_k"] = max(1, min(HARD_MAX_K, int(cfg["top_k"])))
     except (TypeError, ValueError):
         cfg["top_k"] = DEFAULTS["top_k"]
+    fams = dict(DEFAULTS["opt_in_families"])
+    extra = user.get("opt_in_families") if isinstance(user, dict) else None
+    if isinstance(extra, list):
+        for f in extra:
+            if isinstance(f, str) and f not in fams:
+                fams[f] = {"skills": [f + "*"], "words": [f]}
+    elif isinstance(extra, dict):
+        fams.update({k: v for k, v in extra.items() if isinstance(v, dict)})
+    cfg["opt_in_families"] = fams
     try:
         cfg["max_chars"] = max(120, min(600, int(cfg["max_chars"])))
     except (TypeError, ValueError):
@@ -166,10 +181,36 @@ def prompt_platforms(qraw_tokens, qtext, routes):
     plats = set()
     for p, spec in (routes.get("platforms") or {}).items():
         for w in spec.get("prompt", []):
-            if (" " in w and w in qtext) or w in qraw_tokens:
+            if ((" " in w or "." in w) and w in qtext) or w in qraw_tokens:
                 plats.add(p)
                 break
     return plats
+
+
+def resolve_platforms(project, prompt_side, routes):
+    """Platforms in force. A language counts from the project only when the
+    prompt names no other language (contradictory evidence -> stay silent)."""
+    specs = routes.get("platforms") or {}
+    langs = set(p for p, sp in specs.items() if sp.get("kind") == "language")
+    if prompt_side & langs:
+        return (project - langs) | prompt_side
+    return project | prompt_side
+
+
+def muted_names(skills, prompt_side, routes, cfg, qtext, qraw):
+    """Skill names muted for this prompt: opt-in families whose word is absent,
+    and skills a named platform supersedes (Figma named -> image-to-code muted)."""
+    pats = []
+    for fam, spec in (cfg.get("opt_in_families") or {}).items():
+        words = spec.get("words") or [fam]
+        if not any(((" " in w) and w in qtext) or w in qraw for w in words):
+            pats += spec.get("skills") or [fam + "*"]
+    for p in prompt_side:
+        pats += (routes.get("platforms") or {}).get(p, {}).get("suppresses", [])
+    if not pats:
+        return set()
+    return set(s["name"] for s in skills
+               if any(fnmatch.fnmatchcase(s["name"], pt) or fnmatch.fnmatchcase(s["base"], pt) for pt in pats))
 
 
 # ------------------------------------------------------------------ scoring
@@ -187,6 +228,8 @@ class Query(object):
         self.phrase = " " + " ".join(self.toks) + " "
         self.bigrams = srlib.bigrams(self.toks)
         self.dir = srlib.directional(prompt)
+        if "to:@code" in self.dir and "code" not in self.set:
+            self.exp.add("code")
         idf = idx["idf"]
         # rare = specific vocabulary (few skills mention it)
         self.rare = set(t for t in self.set if t not in srlib.WEAK and idf.get(t, 0) >= 3.2)
@@ -245,17 +288,26 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
     # direction: 'page into Figma' vs 'Figma into code'
     sdir = s.get("dir") or {}
     wrong_dir = False
+    dir_ev = False
     for d in q.dir:
         kind, x = d.split(":", 1)
-        if x in srlib.WEAK or idf.get(x, 0) < 2.0:
+        cls = x.startswith("@")
+        if not cls and (x in srlib.WEAK or idf.get(x, 0) < 2.0):
             continue
         opp = ("from:" if kind == "to" else "to:") + x
         a, b = sdir.get(d, 0), sdir.get(opp, 0)
         if a or b:
             aff = (a - b) / float(a + b + 1)
-            score += 2.5 * aff * idf.get(x, 2.0) / 2.0
+            score += 2.5 * aff * (CLASS_WEIGHT if cls else idf.get(x, 2.0)) / 2.0
             if aff < -0.3:
                 wrong_dir = True
+            elif cls and aff >= 0.3:
+                dir_ev = True
+    conv = s.get("conv")
+    if conv and any("from:" + c in q.dir for c in conv[0]) and any("to:" + c in q.dir for c in conv[1]):
+        score += 2 * CLASS_WEIGHT   # the skill's name is this exact conversion (image-to-code)
+        rare_name = True
+        dir_ev = True
     if wrong_dir:
         score *= WRONG_DIRECTION_PENALTY
     if q.set & set(s.get("neg", ())) and not name_hit:
@@ -263,6 +315,8 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
     strong = [t for t in matched if t not in srlib.WEAK and idf.get(t, 2.0) >= 1.5]
     evidence = len(strong) + len([t for t in matched if t in srlib.WEAK and t in name_toks])
     if bg:
+        evidence += 1
+    if dir_ev:
         evidence += 1
     sig = signals.get(s["name"]) or signals.get(s["base"])
     plat = s.get("platform")
@@ -296,11 +350,13 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
     return score, evidence, name_hit or ph_hits > 0 or rare_name, rare_hit, sorted(matched), (gated, wrong_dir)
 
 
-def score_all(prompt, idx, signals, extra_skills=(), platforms=frozenset()):
+def score_all(prompt, idx, signals, extra_skills=(), platforms=frozenset(), muted=frozenset()):
     q = Query(prompt, idx)
     build_intent = bool(q.set & BUILD_INTENT)
     results = []
     for s in list(idx["skills"]) + list(extra_skills):
+        if s["name"] in muted:
+            continue
         score, evidence, exact, rare_hit, matched, flags = score_skill(q, s, idx, signals, platforms, build_intent)
         if score > 0:
             results.append((score, s, evidence, exact, matched, rare_hit, flags))
@@ -465,8 +521,12 @@ def run(payload, ddir=None, persist=True):
     idx = load_index(ddir)
     cwd = payload.get("cwd") or ""
     routes = load_json(os.path.join(os.path.dirname(HERE), "routes.json"), {}) or {}
-    signals, platforms = project_signals(cwd, routes)
-    platforms |= prompt_platforms(set(srlib.raw_tokens(prompt)), prompt.lower(), routes)
+    signals, project_plats = project_signals(cwd, routes)
+    rprompt = srlib.rewrite(prompt)
+    qraw = set(srlib.raw_tokens(rprompt))
+    prompt_plats = prompt_platforms(qraw, rprompt.lower(), routes)
+    platforms = resolve_platforms(project_plats, prompt_plats, routes)
+    muted = muted_names(idx["skills"], prompt_plats, routes, cfg, rprompt.lower(), qraw)
     extra = project_skills(cwd)
     known = {s["name"] for s in idx["skills"]}
     extra = [s for s in extra if s["name"] not in known]
@@ -475,7 +535,7 @@ def run(payload, ddir=None, persist=True):
     if persist:
         scan_transcript(payload.get("transcript_path"), state)
     skip = set(state.get("suggested", [])) | set(state.get("used", []))
-    results = score_all(prompt, idx, signals, extra, platforms)
+    results = score_all(prompt, idx, signals, extra, platforms, muted)
     chosen = pick(results, cfg, skip, short=prompt_size(prompt) < 4)
     if cfg.get("debug"):
         sys.stderr.write("skill-router top: %s\n" % [(round(r[0], 1), r[1]["name"], r[2], r[4]) for r in results[:6]])
