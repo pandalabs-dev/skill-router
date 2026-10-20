@@ -1,5 +1,5 @@
 {
-  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. class_dev / class_holdout_v4: miss-class variation sets (A common-word names, B security intent, C SEO intent, D same-category extras); pass = an accepted skill is suggested (if any listed), no 'forbid' skill appears, and at most 'max_names' names. class_holdout_v4 and class_neg_holdout_v4 were frozen before 0.4.0 tuning. holdout_v3/v2/v1 are earlier holdouts minus prompts moved to dev after tuning on them. silent items must produce no hint. class_neg_* are look-alikes that must not fire their class (A: a skill matched only through everyday words in its name; B: security skills; C: seo-* skills; D: image-to-code / image generation); other skills may still fire. deep: deep-mode prompts (task + trigger phrase); accept [] means the hint must say no installed skill matches.",
+  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. class_dev / class_holdout_v4: miss-class variation sets (A common-word names, B security intent, C SEO intent, D same-category extras); pass = an accepted skill is suggested (if any listed), no 'forbid' skill appears, and at most 'max_names' names. class_holdout_v4 and class_neg_holdout_v4 were frozen before 0.4.0 tuning. holdout_v3/v2/v1 are earlier holdouts minus prompts moved to dev after tuning on them. silent items must produce no hint. class_neg_* are look-alikes that must not fire their class (A: a skill matched only through everyday words in its name; B: security skills; C: seo-* skills; D: image-to-code / image generation); other skills may still fire. deep: deep-mode prompts (task + trigger phrase); accept [] means the hint must say no installed skill matches. deep_holdout was frozen before the 1.2.0 deep-mode tuning and must not be tuned against.",
   "dev": [
     {
       "p": "add a new tab screen with expo router",
@@ -2102,6 +2102,248 @@
     {
       "task": "what's the weather like tomorrow",
       "trigger": "use relevant skills",
+      "accept": []
+    }
+  ],
+  "deep_holdout": [
+    {
+      "task": "people keep guessing passwords on our admin login",
+      "trigger": "use necessary skills",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "task": "make the landing page feel like a luxury watch brand",
+      "trigger": "use relevant skills",
+      "accept": [
+        "high-end-visual-design",
+        "design-taste-frontend"
+      ]
+    },
+    {
+      "task": "let users log in with their github account",
+      "trigger": "use the right skills",
+      "accept": [
+        "vercel:auth",
+        "secure-code-guardian"
+      ]
+    },
+    {
+      "task": "our site dropped off google search",
+      "trigger": "use relevant skills",
+      "accept": [
+        "seo",
+        "seo-drift",
+        "seo-technical",
+        "seo-google"
+      ]
+    },
+    {
+      "task": "this sql is crawling, can you speed it up",
+      "trigger": "+skills",
+      "accept": [
+        "sql-pro",
+        "database-optimizer",
+        "postgres-pro"
+      ]
+    },
+    {
+      "task": "wirte a dockerfile for the node api",
+      "trigger": "use necessary skills",
+      "accept": [
+        "devops-engineer"
+      ]
+    },
+    {
+      "task": "turn this figma mockup into vue components",
+      "trigger": "find skills for this",
+      "accept": [
+        "figma:figma-design-to-code"
+      ]
+    },
+    {
+      "task": "add tabs to the bottom of the expo app",
+      "trigger": "use relevant skills",
+      "accept": [
+        "expo-router",
+        "expo-native-ui"
+      ]
+    },
+    {
+      "task": "the tests pass locally but fail on CI sometimes",
+      "trigger": "use the right skills",
+      "accept": [
+        "superpowers:systematic-debugging",
+        "test-master",
+        "debugging-wizard"
+      ]
+    },
+    {
+      "task": "make an excel file with the budget",
+      "trigger": "use relevant skills",
+      "accept": [
+        "anthropic-skills:xlsx"
+      ]
+    },
+    {
+      "task": "put together a pitch deck for investors",
+      "trigger": "+skills",
+      "accept": [
+        "anthropic-skills:pptx",
+        "slides"
+      ]
+    },
+    {
+      "task": "check the smart contract for exploits",
+      "trigger": "use necessary skills",
+      "accept": [
+        "solidity-security"
+      ]
+    },
+    {
+      "task": "generate a product video for instagram",
+      "trigger": "use relevant skills",
+      "accept": [
+        "higgsfield-generate",
+        "higgsfield-video-explainer"
+      ]
+    },
+    {
+      "task": "help me plan out this feature before coding",
+      "trigger": "use the right skills",
+      "accept": [
+        "superpowers:writing-plans",
+        "superpowers:brainstorming",
+        "feature-forge"
+      ]
+    },
+    {
+      "task": "set up alerts when the error rate spikes",
+      "trigger": "use relevant skills",
+      "accept": [
+        "monitoring-expert",
+        "sre-engineer"
+      ]
+    },
+    {
+      "task": "our k8s pods keep restarting",
+      "trigger": "find skills for this",
+      "accept": [
+        "kubernetes-specialist",
+        "devops-engineer",
+        "superpowers:systematic-debugging"
+      ]
+    },
+    {
+      "task": "make the app look good in dark mode",
+      "trigger": "use necessary skills",
+      "accept": [
+        "ui-ux-pro-max",
+        "tailwind-design-system",
+        "ui-styling",
+        "design-system"
+      ]
+    },
+    {
+      "task": "translate the site into german and french with proper tags",
+      "trigger": "use relevant skills",
+      "accept": [
+        "seo-hreflang"
+      ]
+    },
+    {
+      "task": "build a chatbot that answers from our docs",
+      "trigger": "use the right skills",
+      "accept": [
+        "rag-architect",
+        "vercel:ai-sdk",
+        "vercel:chat-sdk"
+      ]
+    },
+    {
+      "task": "the page jumps around while loading, fix it",
+      "trigger": "+skills",
+      "accept": [
+        "seo-technical",
+        "vercel:react-best-practices",
+        "vercel-react-best-practices",
+        "react-expert"
+      ]
+    },
+    {
+      "task": "write a sql migration that adds a column safely",
+      "trigger": "use relevant skills",
+      "accept": [
+        "migration",
+        "sql-pro",
+        "postgres-pro"
+      ]
+    },
+    {
+      "task": "review this pull request for problems",
+      "trigger": "use necessary skills",
+      "accept": [
+        "code-reviewer",
+        "code-review"
+      ]
+    },
+    {
+      "task": "store files users upload on vercel",
+      "trigger": "use relevant skills",
+      "accept": [
+        "vercel:vercel-storage"
+      ]
+    },
+    {
+      "task": "make a pdf report from this data",
+      "trigger": "use the right skills",
+      "accept": [
+        "anthropic-skills:pdf",
+        "dataviz"
+      ]
+    },
+    {
+      "task": "write unit tests first then the code",
+      "trigger": "use relevant skills",
+      "accept": [
+        "superpowers:test-driven-development",
+        "test-master"
+      ]
+    },
+    {
+      "task": "the api leaks other customers data when you change the id",
+      "trigger": "use necessary skills",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "task": "speed up our next.js build times",
+      "trigger": "find skills for this",
+      "accept": [
+        "vercel:turbopack",
+        "vercel:nextjs",
+        "nextjs-developer"
+      ]
+    },
+    {
+      "task": "recommend a good pizza place nearby",
+      "trigger": "use relevant skills",
+      "accept": []
+    },
+    {
+      "task": "how tall is mount everest",
+      "trigger": "+skills",
+      "accept": []
+    },
+    {
+      "task": "write a birthday poem for my mom",
+      "trigger": "use necessary skills",
       "accept": []
     }
   ]
