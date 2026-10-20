@@ -11,7 +11,7 @@
       "name": "skill-router",
       "source": "./",
       "description": "Prompt-time skill suggestions from an index of every installed skill description.",
-      "version": "0.4.0"
+      "version": "1.0.1"
     }
   ]
 }
