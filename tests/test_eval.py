@@ -20,10 +20,10 @@ class EvalTests(unittest.TestCase):
             cls.h.close()
             raise unittest.SkipTest("most labeled skills are not installed here")
         cls.m = eval_lib.metrics(cls.h, cls.data)
-        sys.stderr.write("\n[eval] dev top1=%.0f%% hit@5=%.0f%% | holdout top1=%.0f%% hit@5=%.0f%% | "
+        sys.stderr.write("\n[eval] dev top1=%.0f%% hit@5=%.0f%% | holdout_v3 top1=%.0f%% hit@5=%.0f%% | "
                          "silent false-fire=%.0f%% | everyday fire=%.0f%% avg=%.0f | all avg=%.0f max=%d\n" % (
                              cls.m["dev"]["top1"] * 100, cls.m["dev"]["hit5"] * 100,
-                             cls.m["holdout"]["top1"] * 100, cls.m["holdout"]["hit5"] * 100,
+                             cls.m["holdout_v3"]["top1"] * 100, cls.m["holdout_v3"]["hit5"] * 100,
                              cls.m["silent"]["false_fire"] * 100, cls.m["everyday"]["fire"] * 100,
                              cls.m["everyday"]["avg_chars"], cls.m["all"]["avg_chars"], cls.m["all"]["max_chars"]))
 
@@ -37,7 +37,7 @@ class EvalTests(unittest.TestCase):
 
     def test_holdout_quality(self):
         # holdout was frozen before tuning; the bar is lower on purpose
-        self.assertGreaterEqual(self.m["holdout"]["hit5"], 0.6)
+        self.assertGreaterEqual(self.m["holdout_v3"]["hit5"], 0.6)
 
     def test_silent_set(self):
         self.assertLessEqual(self.m["silent"]["false_fire"], 0.1, self.m["silent"]["fires"])

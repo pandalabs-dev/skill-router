@@ -71,7 +71,7 @@ def parse_names(text):
 def metrics(h, data=None):
     data = data or load_set()
     out = {}
-    for split in ("dev", "holdout", "holdout_v2", "holdout_v1"):
+    for split in ("dev", "holdout_v3", "holdout_v2", "holdout_v1"):
         items = [i for i in data.get(split, []) if set(i["accept"]) & h.names]
         top1 = hit = fired = 0
         misses = []
@@ -96,10 +96,38 @@ def metrics(h, data=None):
     out["everyday"] = {"n": len(ev), "fire": sum(1 for s in sizes if s) / float(len(ev)),
                        "avg_chars": sum(sizes) / float(len(ev)), "max_chars": max(sizes),
                        "fired": [(p, n) for p, (t, n) in zip(data["everyday"], ev) if n]}
-    fired_names = [len(h.suggest(i)[1]) for i in data["dev"] + data["holdout"] + [norm(p) for p in data["everyday"]]]
+    for split in ("class_dev", "class_holdout_v4"):
+        per = {}
+        for it in data.get(split, []):
+            if it["accept"] and not (set(it["accept"]) & h.names) and not any(":" not in a for a in it["accept"]):
+                continue
+            _, names = h.suggest(it)
+            ok = (not it["accept"] or bool(set(it["accept"]) & set(names))) \
+                and not (set(it.get("forbid", [])) & set(names)) \
+                and len(names) <= it.get("max_names", 5)
+            d = per.setdefault(it["cls"], {"n": 0, "pass": 0, "fails": [], "names": []})
+            d["n"] += 1
+            d["pass"] += ok
+            if names:
+                d["names"].append(len(names))
+            if not ok:
+                d["fails"].append((it["p"], names))
+        out[split] = per
+    negs = {}
+    for split, items in (("dev", [s for s in data["silent"] if isinstance(s, dict) and s.get("cls")]),
+                         ("holdout_v4", data.get("class_neg_holdout_v4", []))):
+        for it in items:
+            names = h.suggest(it)[1]
+            d = negs.setdefault((split, it["cls"]), {"n": 0, "fired": 0, "fires": []})
+            d["n"] += 1
+            if names:
+                d["fired"] += 1
+                d["fires"].append((it["p"], names))
+    out["class_neg"] = negs
+    fired_names = [len(h.suggest(i)[1]) for i in data["dev"] + data["holdout_v3"] + [norm(p) for p in data["everyday"]]]
     fired_names = [n for n in fired_names if n]
     out["names_per_hint"] = sum(fired_names) / float(len(fired_names) or 1)
-    allp = [norm(i) for i in data["dev"] + data["holdout"]] + [norm(s) for s in silent] + [norm(p) for p in data["everyday"]]
+    allp = [norm(i) for i in data["dev"] + data["holdout_v3"] + data["class_dev"]] + [norm(s) for s in silent] + [norm(p) for p in data["everyday"]]
     allsizes = [len(h.suggest(i)[0]) for i in allp]
     out["all"] = {"n": len(allp), "avg_chars": sum(allsizes) / float(len(allp)), "max_chars": max(allsizes)}
     return out
@@ -124,10 +152,20 @@ def main():
     h = Harness()
     try:
         m = metrics(h)
-        splits = ("dev", "holdout", "holdout_v2", "holdout_v1") if "--holdout" in sys.argv else ("dev", "holdout_v2", "holdout_v1")
+        splits = ("dev", "holdout_v3", "holdout_v2", "holdout_v1")
         for split in splits:
             d = m[split]
             print("%-8s n=%d top1=%.0f%% hit@5=%.0f%% fired=%.0f%%" % (split, d["n"], d["top1"] * 100, d["hit5"] * 100, d["fired"] * 100))
+        csplits = ("class_dev", "class_holdout_v4") if "--holdout" in sys.argv else ("class_dev",)
+        for cs in csplits:
+            for c in sorted(m[cs]):
+                d = m[cs][c]
+                nh = sum(d["names"]) / float(len(d["names"]) or 1)
+                print("%-17s %s n=%d pass=%.0f%% names/hint=%.2f" % (cs, c, d["n"], 100.0 * d["pass"] / d["n"], nh))
+        for (sp, c), d in sorted(m["class_neg"].items()):
+            if sp == "holdout_v4" and "--holdout" not in sys.argv:
+                continue
+            print("neg %-10s %s n=%d false_fire=%.0f%%" % (sp, c, d["n"], 100.0 * d["fired"] / d["n"]))
         print("silent   n=%d false_fire=%.0f%% %s" % (m["silent"]["n"], m["silent"]["false_fire"] * 100, m["silent"]["fires"]))
         e = m["everyday"]
         print("everyday n=%d fire=%.0f%% avg_chars=%.1f max_chars=%d" % (e["n"], e["fire"] * 100, e["avg_chars"], e["max_chars"]))
@@ -139,6 +177,14 @@ def main():
             for split in splits:
                 for p, n in m[split]["misses"]:
                     print("MISS %-7s %s -> %s" % (split, p, n))
+            for cs in csplits:
+                for c in sorted(m[cs]):
+                    for p, n in m[cs][c]["fails"]:
+                        print("FAIL %s %s: %s -> %s" % (cs, c, p, n))
+            for (sp, c), d in sorted(m["class_neg"].items()):
+                if sp == "dev" or "--holdout" in sys.argv:
+                    for p, n in d["fires"]:
+                        print("NEGFIRE %s %s: %s -> %s" % (sp, c, p, n))
             for p, n in m["everyday"]["fired"]:
                 print("EVERYDAY fired: %s -> %s" % (p, n))
     finally:

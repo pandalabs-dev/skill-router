@@ -1,5 +1,5 @@
 {
-  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. 'holdout' (v3) was frozen before the 0.3.0 tuning and must not be tuned against; 'holdout_v2' / 'holdout_v1' are earlier holdouts minus prompts moved to dev after tuning on them. 'fixture' names a synthetic project dir (see eval_lib.FIXTURES).",
+  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. class_dev / class_holdout_v4: miss-class variation sets (A common-word names, B security intent, C SEO intent, D same-category extras); pass = an accepted skill is suggested (if any listed), no 'forbid' skill appears, and at most 'max_names' names. class_holdout_v4 and class_neg_holdout_v4 were frozen before 0.4.0 tuning. holdout_v3/v2/v1 are earlier holdouts minus prompts moved to dev after tuning on them. silent items (strings or {p, cls}) must produce no hint.",
   "dev": [
     {
       "p": "add a new tab screen with expo router",
@@ -384,7 +384,933 @@
       ]
     }
   ],
-  "holdout": [
+  "class_dev": [
+    {
+      "p": "write a Prometheus alert for high error rate",
+      "cls": "A",
+      "accept": [
+        "monitoring-expert",
+        "sre-engineer"
+      ],
+      "forbid": [
+        "high-end-visual-design"
+      ]
+    },
+    {
+      "p": "make a lean startup pitch deck for investors",
+      "cls": "A",
+      "accept": [
+        "anthropic-skills:pptx"
+      ],
+      "forbid": [
+        "lean-build"
+      ]
+    },
+    {
+      "p": "the end to end latency is too high on checkout",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "high-end-visual-design"
+      ]
+    },
+    {
+      "p": "print the full output of the last command",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "full-output-enforcement"
+      ]
+    },
+    {
+      "p": "the CPU usage is high on the worker after the deploy",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "high-end-visual-design"
+      ]
+    },
+    {
+      "p": "add a master switch to disable all notifications",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "test-master"
+      ]
+    },
+    {
+      "p": "the setup wizard on onboarding skips step 3",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "debugging-wizard"
+      ]
+    },
+    {
+      "p": "game plan for tomorrow: finish the invoices",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "game-developer"
+      ]
+    },
+    {
+      "p": "make the hero section feel minimal and calm",
+      "cls": "A",
+      "accept": [
+        "minimalist-ui",
+        "design-taste-frontend",
+        "high-end-visual-design",
+        "frontend-design:frontend-design"
+      ],
+      "forbid": []
+    },
+    {
+      "p": "build a high-end luxury landing page for a watch brand",
+      "cls": "A",
+      "accept": [
+        "high-end-visual-design"
+      ],
+      "forbid": []
+    },
+    {
+      "p": "make a minimalist UI for the settings screen",
+      "cls": "A",
+      "accept": [
+        "minimalist-ui"
+      ],
+      "forbid": []
+    },
+    {
+      "p": "trace this stack trace and find the root cause",
+      "cls": "A",
+      "accept": [
+        "debugging-wizard",
+        "superpowers:systematic-debugging"
+      ],
+      "forbid": []
+    },
+    {
+      "p": "write the full file, do not truncate or skip any part",
+      "cls": "A",
+      "accept": [
+        "full-output-enforcement"
+      ],
+      "forbid": []
+    },
+    {
+      "p": "high error rate alerts are firing on the payments API in Grafana",
+      "cls": "A",
+      "accept": [
+        "monitoring-expert",
+        "sre-engineer"
+      ],
+      "forbid": [
+        "high-end-visual-design"
+      ]
+    },
+    {
+      "p": "low stock alert email for the shop admin",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "high-end-visual-design"
+      ]
+    },
+    {
+      "p": "harden this login endpoint against brute force attacks",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "lock accounts after 5 failed login attempts",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "check this query builder for SQL injection",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "is this comment rendering vulnerable to XSS?",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "the image proxy fetches any URL, can that be abused for SSRF?",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "someone bypassed auth on the admin route, find how",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "check for session fixation in our cookie handling",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "I leaked an API key in a public gist, how do I contain it",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "prepare the app for a pentest next week",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "npm audit says a dependency has a critical CVE",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "sanitize user input in the search box so nobody can inject scripts",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "jwt tokens never expire, is that a problem",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "check the solidity vault contract for reentrancy and access control bugs",
+      "cls": "B",
+      "accept": [
+        "solidity-security"
+      ]
+    },
+    {
+      "p": "add brute-force protection to the password reset endpoint",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "harden the nginx config, disable weak TLS ciphers",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "improve the meta descriptions and titles on product pages",
+      "cls": "C",
+      "accept": [
+        "seo-page",
+        "seo-content",
+        "seo",
+        "seo-ecommerce"
+      ]
+    },
+    {
+      "p": "is our robots.txt blocking Google from crawling?",
+      "cls": "C",
+      "accept": [
+        "seo-technical",
+        "seo"
+      ]
+    },
+    {
+      "p": "Search Console says pages are discovered but not indexed",
+      "cls": "C",
+      "accept": [
+        "seo-google",
+        "seo-technical",
+        "seo"
+      ]
+    },
+    {
+      "p": "half our pages got deindexed last week",
+      "cls": "C",
+      "accept": [
+        "seo-technical",
+        "seo-google",
+        "seo",
+        "seo-drift"
+      ]
+    },
+    {
+      "p": "add structured data so we get rich results for recipes",
+      "cls": "C",
+      "accept": [
+        "seo-schema"
+      ]
+    },
+    {
+      "p": "do keyword research for our new pricing page",
+      "cls": "C",
+      "accept": [
+        "seo-content-brief",
+        "seo-plan",
+        "seo-cluster",
+        "seo",
+        "seo-dataforseo"
+      ]
+    },
+    {
+      "p": "organic traffic dropped 40% after the redesign",
+      "cls": "C",
+      "accept": [
+        "seo-drift",
+        "seo",
+        "seo-google",
+        "seo-technical"
+      ]
+    },
+    {
+      "p": "add hreflang for the German and French versions",
+      "cls": "C",
+      "accept": [
+        "seo-hreflang"
+      ]
+    },
+    {
+      "p": "how do we show up in Google AI Overviews and ChatGPT answers",
+      "cls": "C",
+      "accept": [
+        "seo-geo"
+      ]
+    },
+    {
+      "p": "make the blog posts rank better in search",
+      "cls": "C",
+      "accept": [
+        "seo-content",
+        "seo",
+        "seo-page"
+      ]
+    },
+    {
+      "p": "write alt text for all product images for search",
+      "cls": "C",
+      "accept": [
+        "seo-images"
+      ]
+    },
+    {
+      "p": "create programmatic landing pages for every city we serve",
+      "cls": "C",
+      "accept": [
+        "seo-programmatic"
+      ]
+    },
+    {
+      "p": "audit the site's on-page optimization for search engines",
+      "cls": "C",
+      "accept": [
+        "seo-audit",
+        "seo",
+        "seo-page"
+      ]
+    },
+    {
+      "p": "submit the sitemap and check indexing coverage in GSC",
+      "cls": "C",
+      "accept": [
+        "seo-google",
+        "seo-sitemap"
+      ]
+    },
+    {
+      "p": "plan a content strategy to grow organic search traffic",
+      "cls": "C",
+      "accept": [
+        "seo-plan",
+        "seo-content",
+        "seo-cluster"
+      ]
+    },
+    {
+      "p": "turn this screenshot into a React component",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "recreate this design image as a Next.js page",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "build the page from this screenshot",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "here's a picture of the UI, implement it in HTML",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "screenshot to code: rebuild this pricing section",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "can you turn my sketch into a working web page",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "make the website look exactly like this screenshot",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "implement this Figma frame as a React component",
+      "cls": "D",
+      "accept": [
+        "figma:figma-design-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "push this React page into Figma",
+      "cls": "D",
+      "accept": [
+        "figma:figma-generate-design"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "submit the iOS build to the App Store",
+      "cls": "D",
+      "accept": [
+        "eas-app-stores"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "add a tab layout with expo router",
+      "cls": "D",
+      "accept": [
+        "expo-router"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "add hreflang tags for Spanish pages",
+      "cls": "D",
+      "accept": [
+        "seo-hreflang"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "generate a sitemap for the docs site",
+      "cls": "D",
+      "accept": [
+        "seo-sitemap"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "write a Playwright test for the checkout",
+      "cls": "D",
+      "accept": [
+        "playwright-expert"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "add a shadcn data table with sorting",
+      "cls": "D",
+      "accept": [
+        "shadcn"
+      ],
+      "max_names": 1
+    }
+  ],
+  "class_holdout_v4": [
+    {
+      "p": "full table scan is slow on the orders query",
+      "cls": "A",
+      "accept": [
+        "sql-pro",
+        "postgres-pro",
+        "database-optimizer"
+      ],
+      "forbid": [
+        "full-output-enforcement"
+      ]
+    },
+    {
+      "p": "is it safe to delete this branch?",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "safe-refactor"
+      ]
+    },
+    {
+      "p": "that was a foolish mistake, revert the last commit",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "the-fool"
+      ]
+    },
+    {
+      "p": "keep the docker image lean and small",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "lean-build"
+      ]
+    },
+    {
+      "p": "is this a safe place to store the API token?",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "safe-refactor"
+      ]
+    },
+    {
+      "p": "add stop and verify buttons to the upload dialog",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "verify-and-stop"
+      ]
+    },
+    {
+      "p": "refactor the payment service safely, behavior must not change",
+      "cls": "A",
+      "accept": [
+        "safe-refactor"
+      ],
+      "forbid": []
+    },
+    {
+      "p": "give me a brutally honest devil's advocate critique of this plan",
+      "cls": "A",
+      "accept": [
+        "the-fool"
+      ],
+      "forbid": []
+    },
+    {
+      "p": "this design looks generic, give it better taste and a premium feel",
+      "cls": "A",
+      "accept": [
+        "design-taste-frontend",
+        "gpt-taste",
+        "high-end-visual-design",
+        "impeccable",
+        "stitch-design-taste"
+      ],
+      "forbid": []
+    },
+    {
+      "p": "the build output folder is huge, shrink the bundle",
+      "cls": "A",
+      "accept": [],
+      "forbid": [
+        "full-output-enforcement",
+        "lean-build"
+      ]
+    },
+    {
+      "p": "add rate limiting to the login route to stop password guessing",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "protect the sign-in form from credential stuffing",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "add CSRF protection to the forms",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "users can read other users' invoices by changing the id in the URL",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "we committed secrets to the repo, what now",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "audit the app against the OWASP top 10",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "lock down the admin panel before launch",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "make sure passwords are hashed properly, we use md5 right now",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "review this smart contract for overflow and front-running issues",
+      "cls": "B",
+      "accept": [
+        "solidity-security"
+      ]
+    },
+    {
+      "p": "our API keys are hardcoded in the frontend bundle",
+      "cls": "B",
+      "accept": [
+        "security-reviewer",
+        "secure-code-guardian",
+        "security-review"
+      ]
+    },
+    {
+      "p": "generate a sitemap.xml for the marketing site",
+      "cls": "C",
+      "accept": [
+        "seo-sitemap"
+      ]
+    },
+    {
+      "p": "how do we rank higher on Google for payment gateway",
+      "cls": "C",
+      "accept": [
+        "seo",
+        "seo-plan",
+        "seo-content",
+        "seo-cluster"
+      ]
+    },
+    {
+      "p": "set canonical URLs for the paginated blog",
+      "cls": "C",
+      "accept": [
+        "seo-technical",
+        "seo-page",
+        "seo"
+      ]
+    },
+    {
+      "p": "find out who links to us and build backlinks",
+      "cls": "C",
+      "accept": [
+        "seo-backlinks"
+      ]
+    },
+    {
+      "p": "check what the SERP looks like for our brand name",
+      "cls": "C",
+      "accept": [
+        "seo-sxo",
+        "seo-dataforseo",
+        "seo"
+      ]
+    },
+    {
+      "p": "core web vitals are hurting our rankings",
+      "cls": "C",
+      "accept": [
+        "seo-technical",
+        "seo"
+      ]
+    },
+    {
+      "p": "our local bakery doesn't show on Google Maps results",
+      "cls": "C",
+      "accept": [
+        "seo-local",
+        "seo-maps"
+      ]
+    },
+    {
+      "p": "compare our rankings with competitor pages",
+      "cls": "C",
+      "accept": [
+        "seo-competitor-pages"
+      ]
+    },
+    {
+      "p": "the title tags are duplicated across the shop",
+      "cls": "C",
+      "accept": [
+        "seo-page",
+        "seo-ecommerce",
+        "seo-technical",
+        "seo"
+      ]
+    },
+    {
+      "p": "optimize product schema for Google Shopping",
+      "cls": "C",
+      "accept": [
+        "seo-ecommerce",
+        "seo-schema"
+      ]
+    },
+    {
+      "p": "make this mockup png into Tailwind HTML",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "code up this wireframe as a React page",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "convert the attached jpg mockup to JSX",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "replicate this landing page from the image in Tailwind",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "convert screnshot to html",
+      "cls": "D",
+      "accept": [
+        "image-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "turn this Figma screen into SwiftUI",
+      "cls": "D",
+      "accept": [
+        "figma:figma-swiftui",
+        "figma:figma-design-to-code"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "set up EAS Build workflows for preview builds",
+      "cls": "D",
+      "accept": [
+        "eas-workflows"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "upgrade expo SDK and fix the breaking changes",
+      "cls": "D",
+      "accept": [
+        "expo-upgrade"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "add product schema JSON-LD",
+      "cls": "D",
+      "accept": [
+        "seo-schema"
+      ],
+      "max_names": 1
+    },
+    {
+      "p": "optimize the slow postgres query using EXPLAIN ANALYZE",
+      "cls": "D",
+      "accept": [
+        "postgres-pro",
+        "sql-pro",
+        "database-optimizer"
+      ],
+      "max_names": 2
+    }
+  ],
+  "class_neg_holdout_v4": [
+    {
+      "p": "the full name field should be required",
+      "cls": "A"
+    },
+    {
+      "p": "which one is the expert option in the settings",
+      "cls": "A"
+    },
+    {
+      "p": "the build is green now",
+      "cls": "A"
+    },
+    {
+      "p": "the output looks fine to me",
+      "cls": "A"
+    },
+    {
+      "p": "inject the dependency into the service constructor",
+      "cls": "B"
+    },
+    {
+      "p": "the attack animation in the game is too slow",
+      "cls": "B"
+    },
+    {
+      "p": "session timeout in the video player is too short",
+      "cls": "B"
+    },
+    {
+      "p": "the password field should show a strength meter",
+      "cls": "B"
+    },
+    {
+      "p": "add an app route for the sitemap screen in the navigation",
+      "cls": "C"
+    },
+    {
+      "p": "add an index on the orders table",
+      "cls": "C"
+    },
+    {
+      "p": "the meta key shortcut opens the command palette",
+      "cls": "C"
+    },
+    {
+      "p": "normalize the address string to canonical form",
+      "cls": "C"
+    },
+    {
+      "p": "resize the image to 800px wide",
+      "cls": "D"
+    },
+    {
+      "p": "add an image carousel component",
+      "cls": "D"
+    },
+    {
+      "p": "upload an image to the CMS",
+      "cls": "D"
+    },
+    {
+      "p": "convert the CSV to JSON",
+      "cls": "D"
+    }
+  ],
+  "holdout_v3": [
     {
       "p": "add a Vercel KV cache for session lookups",
       "accept": [
@@ -450,20 +1376,6 @@
       "accept": [
         "monitoring-expert",
         "sre-engineer"
-      ]
-    },
-    {
-      "p": "write a Prometheus alert for high error rate",
-      "accept": [
-        "monitoring-expert",
-        "sre-engineer"
-      ]
-    },
-    {
-      "p": "harden this login endpoint against brute force attacks",
-      "accept": [
-        "secure-code-guardian",
-        "security-reviewer"
       ]
     },
     {
@@ -807,7 +1719,103 @@
       "fixture": "plain"
     },
     "explain this to me",
-    "can you explain that again, slower"
+    "can you explain that again, slower",
+    {
+      "p": "it's a low priority, do it later",
+      "cls": "A"
+    },
+    {
+      "p": "use a safe default for the timeout",
+      "cls": "A"
+    },
+    {
+      "p": "the master branch is protected",
+      "cls": "A"
+    },
+    {
+      "p": "keep the PR lean",
+      "cls": "A"
+    },
+    {
+      "p": "set the font weight to high contrast",
+      "cls": "A"
+    },
+    {
+      "p": "do a quick sanity check on the numbers",
+      "cls": "A"
+    },
+    {
+      "p": "force push the branch to origin",
+      "cls": "B"
+    },
+    {
+      "p": "lock the DB row while updating the balance",
+      "cls": "B"
+    },
+    {
+      "p": "add a key to the list items to silence the React warning",
+      "cls": "B"
+    },
+    {
+      "p": "hash the file names for cache busting",
+      "cls": "B"
+    },
+    {
+      "p": "expose port 3000 in docker compose",
+      "cls": "B"
+    },
+    {
+      "p": "limit the rate of the carousel autoplay",
+      "cls": "B"
+    },
+    {
+      "p": "design the database schema for invoices",
+      "cls": "C"
+    },
+    {
+      "p": "build a search feature in the app",
+      "cls": "C"
+    },
+    {
+      "p": "rank the leaderboard by score",
+      "cls": "C"
+    },
+    {
+      "p": "sort the table by title",
+      "cls": "C"
+    },
+    {
+      "p": "search the logs for the error",
+      "cls": "C"
+    },
+    {
+      "p": "the traffic light component colors are off",
+      "cls": "C"
+    },
+    {
+      "p": "take a screenshot of the page",
+      "cls": "D"
+    },
+    {
+      "p": "compress the PNGs in the public folder",
+      "cls": "D"
+    },
+    {
+      "p": "the screenshot test is failing",
+      "cls": "D"
+    },
+    {
+      "p": "show the user's avatar image in the header",
+      "cls": "D"
+    },
+    {
+      "p": "crop the profile photo to a square",
+      "cls": "D"
+    },
+    {
+      "p": "convert the date to ISO format",
+      "cls": "D"
+    }
   ],
   "everyday": [
     "commit this and push to main",
