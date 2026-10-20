@@ -270,10 +270,14 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
     distinct = [t for t in name_toks if t not in srlib.WEAK and t not in srlib.NAME_GENERIC]
     qall = q.set | q.exp
     fam = s.get("family")
-    if not name_hit and not sig and not (plat and plat_ok):
-        if distinct and not (set(distinct) & qall):
+    if not name_hit and not sig:
+        # the word that sets a skill apart from its siblings (figma-implement-MOTION,
+        # seo-HREFLANG) must show up; the shared family/plugin word does not count
+        shared = {fam, s.get("plugin"), plat}
+        core = [t for t in distinct if t not in shared]
+        if core and not (set(core) & qall):
             score *= SPECIALISATION_PENALTY
-        elif fam and fam not in qall:
+        elif fam and fam not in qall and not (plat and plat_ok):
             score *= SPECIALISATION_PENALTY   # seo-*, caveman-* ... family word absent
     gated = not plat_ok and not multi_hit
     if gated:
@@ -289,7 +293,7 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
         elif build_intent and matched:
             score += 2.5 * sig
     rare_hit = bool(q.rare & matched) or name_hit
-    return score, evidence, name_hit or ph_hits > 0 or rare_name, rare_hit, sorted(matched), gated
+    return score, evidence, name_hit or ph_hits > 0 or rare_name, rare_hit, sorted(matched), (gated, wrong_dir)
 
 
 def score_all(prompt, idx, signals, extra_skills=(), platforms=frozenset()):
@@ -297,9 +301,9 @@ def score_all(prompt, idx, signals, extra_skills=(), platforms=frozenset()):
     build_intent = bool(q.set & BUILD_INTENT)
     results = []
     for s in list(idx["skills"]) + list(extra_skills):
-        score, evidence, exact, rare_hit, matched, gated = score_skill(q, s, idx, signals, platforms, build_intent)
+        score, evidence, exact, rare_hit, matched, flags = score_skill(q, s, idx, signals, platforms, build_intent)
         if score > 0:
-            results.append((score, s, evidence, exact, matched, rare_hit, gated))
+            results.append((score, s, evidence, exact, matched, rare_hit, flags))
     results.sort(key=lambda r: -r[0])
     return results
 
@@ -312,9 +316,10 @@ def pick(results, cfg, skip_names, short=False):
     rel_cutoff x first pick and at least one specific term. Short prompts
     (< 4 meaningful words) need a rare, specific hit and a higher score."""
     chosen = []
+    first_matched = set()
     blockers = []   # higher-scoring candidates that were not confident
     min_score = cfg["min_score"] * (1.3 if short else 1.0)
-    for score, s, evidence, exact, _m, rare_hit, gated in results:
+    for score, s, evidence, exact, matched, rare_hit, (gated, wrong_dir) in results:
         name = s["dup_of"] or s["name"]
         if name in skip_names or s["name"] in skip_names or name in cfg["exclude"] or s["name"] in cfg["exclude"]:
             continue
@@ -331,6 +336,7 @@ def pick(results, cfg, skip_names, short=False):
                 ok = False
             if ok:
                 chosen.append((score, name, s))
+                first_matched = set(matched)
             else:
                 blockers.append((score, s))
                 if len(blockers) > 4:
@@ -338,7 +344,10 @@ def pick(results, cfg, skip_names, short=False):
             continue
         if score < cfg["rel_cutoff"] * chosen[0][0]:
             break
-        if (evidence >= 2 or exact) and score >= 0.6 * cfg["min_score"]:
+        # an extra name must be confident, point the same way, and match something
+        # the first pick did not (siblings matching the same words add nothing)
+        if ((evidence >= 2 or exact) and score >= 0.6 * cfg["min_score"] and not wrong_dir
+                and not set(matched) <= first_matched):
             chosen.append((score, name, s))
         if len(chosen) >= cfg["top_k"]:
             break
