@@ -7,6 +7,7 @@ Usage:
   build_index.py --stats    rebuild and print a summary
 Never prints anything in --if-stale mode (SessionStart must stay silent).
 """
+import fnmatch
 import hashlib
 import json
 import math
@@ -18,6 +19,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import srlib  # noqa: E402
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLAUDE = srlib.claude_dir()
 USER_SKILLS = os.path.join(CLAUDE, "skills")
 PLUGINS = os.path.join(CLAUDE, "plugins")
@@ -173,28 +175,34 @@ def extract(entry):
                 break
     if not desc:
         return None
+    return from_description(entry, desc)
+
+
+def from_description(entry, desc):
     base = entry["name"].split(":", 1)[-1]
+    pos, neg = srlib.split_negative(desc)
     phrases = set()
-    for m in _QUOTED.finditer(desc):
+    for m in _QUOTED.finditer(pos):
         ph = srlib.norm_phrase(m.group(1))
         if len(ph.split()) >= 2:
             phrases.add(ph)
     kw = []
-    for m in _LIST_HEADS.finditer(desc):
+    for m in _LIST_HEADS.finditer(pos):
         for item in re.split(r",|;|\bor\b|/", m.group(1)):
             ph = srlib.norm_phrase(item)
             if not ph:
                 continue
-            if len(ph.split()) >= 2 and len(ph.split()) <= 4:
+            if 2 <= len(ph.split()) <= 4:
                 phrases.add(ph)
             kw.extend(ph.split())
-    for m in _USE_WHEN.finditer(desc):
+    for m in _USE_WHEN.finditer(pos):
         kw.extend(srlib.tokens(m.group(1)))
     name_toks = srlib.name_tokens(base.replace("-", " ").replace("_", " "))
-    desc_toks = srlib.tokens(desc)
+    desc_toks = srlib.tokens(pos)
     tf = {}
     for t in desc_toks:
         tf[t] = tf.get(t, 0) + 1
+    neg_toks = set(srlib.tokens(neg)) - set(tf) - set(name_toks)
     return {
         "name": entry["name"],
         "base": base,
@@ -206,10 +214,51 @@ def extract(entry):
         "name_phrase": " ".join(name_toks),
         "kw": sorted(set(kw) - set(name_toks)),
         "phrases": sorted(phrases),
+        "bigrams": sorted(srlib.bigrams(desc_toks)),
+        "dir": srlib.directional(pos),
+        "neg": sorted(neg_toks),
         "tf": tf,
         "dl": len(desc_toks),
+        "platform": None,
         "dup_of": None,
     }
+
+
+# ------------------------------------------------------------ builtins
+
+def has_claude_ai_login():
+    """anthropic-skills:* are served to claude.ai-account logins (key presence only)."""
+    for p in (os.path.join(CLAUDE, ".claude.json"), os.path.join(srlib.HOME, ".claude.json")):
+        data = load_json(p)
+        if isinstance(data, dict):
+            return "oauthAccount" in data
+    return False
+
+
+def builtin_entries(mode="auto"):
+    """Skills the Skill tool exposes with no file on disk (static list, may drift)."""
+    if mode is False or mode == "off":
+        return []
+    data = load_json(os.path.join(ROOT, "builtin_skills.json"), {}) or {}
+    login = mode is True or mode == "on" or has_claude_ai_login()
+    out = []
+    for group in data.get("groups", []):
+        if group.get("requires") == "claude-ai-login" and not login:
+            continue
+        for item in group.get("skills", []):
+            if item.get("name") and item.get("description"):
+                out.append((item["name"], item["description"]))
+    return out
+
+
+def tag_platforms(skills):
+    routes = load_json(os.path.join(ROOT, "routes.json"), {}) or {}
+    plats = routes.get("platforms") or {}
+    for s in skills:
+        for pname, spec in plats.items():
+            if any(fnmatch.fnmatchcase(s["name"], pat) for pat in spec.get("skills", [])):
+                s["platform"] = pname
+                break
 
 
 def mark_duplicates(skills, prefer_user=True):
@@ -243,7 +292,10 @@ def mark_duplicates(skills, prefer_user=True):
 def source_signature():
     """Cheap fingerprint of every input: dir mtimes + SKILL.md mtimes + plugin registry."""
     sig = []
-    for p in (INSTALLED, SETTINGS, USER_SKILLS, os.path.join(PLUGINS, "synced"), os.path.abspath(__file__)):
+    for p in (INSTALLED, SETTINGS, USER_SKILLS, os.path.join(PLUGINS, "synced"), os.path.abspath(__file__),
+              os.path.join(ROOT, "routes.json"), os.path.join(ROOT, "builtin_skills.json"),
+              os.path.join(os.path.dirname(os.path.abspath(__file__)), "srlib.py"),
+              os.path.join(srlib.data_dir(), "config.json")):
         try:
             sig.append(int(os.stat(p).st_mtime))
         except OSError:
@@ -262,11 +314,30 @@ def source_signature():
 def build(out_dir=None):
     out_dir = out_dir or srlib.data_dir()
     skills = [s for s in (extract(e) for e in discover()) if s]
+    cfg = load_json(os.path.join(out_dir, "config.json"), {}) or {}
+    have = {s["name"] for s in skills} | {s["base"] for s in skills}
+    for name, desc in builtin_entries(cfg.get("builtins", "auto") if isinstance(cfg, dict) else "auto"):
+        if name not in have and name.split(":", 1)[-1] not in have:
+            skills.append(from_description({"name": name, "path": "builtin", "source": "builtin",
+                                            "plugin": name.split(":", 1)[0] if ":" in name else None}, desc))
     mark_duplicates(skills)
+    tag_platforms(skills)
+    # family prefix: first name token shared by >= 3 skills (seo-*, caveman-*, expo-* ...)
+    firsts = {}
+    for s in skills:
+        if s["name_toks"]:
+            f = srlib.name_tokens(s["base"].replace("-", " "))[0]
+            firsts[f] = firsts.get(f, 0) + 1
+    for s in skills:
+        ft = srlib.name_tokens(s["base"].replace("-", " "))
+        s["family"] = ft[0] if ft and firsts.get(ft[0], 0) >= 3 and ft[0] not in srlib.WEAK else None
+        s["first"] = ft[0] if ft else None
     df = {}
     for s in skills:
         for t in set(s["tf"]) | set(s["name_toks"]) | set(s["kw"]):
             df[t] = df.get(t, 0) + 1
+        for d in s["dir"]:
+            df[d] = df.get(d, 0) + 1
     n = len(skills)
     avgdl = sum(s["dl"] for s in skills) / float(n or 1)
     idx = {

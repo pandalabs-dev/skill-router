@@ -1,10 +1,16 @@
 {
   "name": "skill-router",
-  "version": "0.1.0",
-  "description": "Surfaces the one or two skills relevant to each prompt (silent by default, capped, once per session) so the model loads only the skills it needs instead of guessing across a trimmed listing.",
+  "version": "0.2.0",
+  "description": "Names the few installed skills that fit each prompt (silent by default, at most 5 names, once per session) so the model loads only what it needs.",
   "author": {
     "name": "Andrija Peric"
   },
   "license": "MIT",
-  "keywords": ["skills", "routing", "hooks", "context", "tokens"]
+  "keywords": [
+    "skills",
+    "routing",
+    "hooks",
+    "context",
+    "tokens"
+  ]
 }

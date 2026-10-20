@@ -5,7 +5,7 @@ Reads the hook JSON on stdin, prints a UserPromptSubmit JSON object with
 hookSpecificOutput.additionalContext, or prints nothing. Never fails a prompt:
 every error path exits 0 silently.
 
-Budget design: silent by default, capped output (~300 chars), and each skill is
+Budget design: silent by default, capped output (<= 400 chars, <= 5 names), and each skill is
 suggested at most once per session.
 """
 import json
@@ -20,32 +20,39 @@ sys.path.insert(0, HERE)
 import srlib  # noqa: E402
 
 DEFAULTS = {
-    "top_k": 2,          # hard max 3
-    "min_score": 10.0,   # confidence threshold (BM25-ish units)
-    "min_terms": 2,      # distinct non-generic prompt terms that must match
-    "max_chars": 300,    # cap for the whole injected text
-    "desc_chars": 60,    # description fragment, only when the name is ambiguous
+    "top_k": 5,          # hard max 5; extra names must earn their place (rel_cutoff)
+    "min_score": 9.0,   # confidence threshold for the first pick (BM25-ish units)
+    "min_terms": 2,      # specific prompt terms that must match (or an exact name/phrase hit)
+    "rel_cutoff": 0.5,   # extra picks must score >= this fraction of the first pick
+    "max_chars": 400,    # cap for the whole injected text
+    "desc_chars": 60,    # fragment for the first 1-2 names, only when the name is ambiguous
     "exclude": [],
+    "builtins": "auto",  # index builtin_skills.json: "auto" | true | false
     "debug": False,
 }
-HEADER = "skill-router hint (load via Skill tool only if relevant): "
+HARD_MAX_K = 5
+HEADER = "skill-router hint (load via Skill tool if relevant): "
 K1, B = 1.2, 0.75
-SPECIALISATION_PENALTY = 0.6
-SECOND_RATIO = 0.8   # a 2nd/3rd skill must score >= 80% of the first pick
-FIELD_RATIO = 0.75   # candidates below 75% of the best raw score are never picked
+SPECIALISATION_PENALTY = 0.6   # domain-named skill, domain absent from prompt and project
+PLATFORM_PENALTY = 0.5         # platform skill (vercel:*, expo-*, figma:*) without platform evidence
+NEGATIVE_PENALTY = 0.45        # prompt hits the skill's "NOT for:" clause
+WRONG_DIRECTION_PENALTY = 0.6  # e.g. prompt goes code->Figma, skill goes Figma->code
+VERY_RARE_IDF = 99.0  # disabled: common English words are rare in descriptions too
+FIELD_RATIO = 0.9              # first pick must be within 90% of the best raw score (else ambiguous)
 STATE_TTL = 3 * 24 * 3600
 
 CONTINUATION = re.compile(
     r"^\s*(ok(ay)?|k|yes|yep|yeah|no|nope|sure|go( on| ahead)?|continue|proceed|do it|ship it|"
     r"thanks?( you)?|thx|ty|lgtm|nice|great|cool|perfect|done|next|again|retry|try again|"
-    r"sounds good|looks good|go for it|keep going|carry on|resume)\b[\s.!?]*$",
+    r"sounds good|looks good|go for it|keep going|carry on|resume)\b[\s.,!?]*"
+    r"((go ahead|ship it|do it|thanks?|please|continue)\b[\s.,!?]*)*$",
     re.I)
 FILLER = set("a an the to of in on at for with and or but is are be it this that these those i me my "
              "you your we our pls please just now then so ok okay yes no".split())
 BUILD_INTENT = set(srlib.stem(w) for w in (
     "add build create implement fix debug setup set configure scaffold migrate wire integrate "
     "screen route endpoint component page deploy upgrade install refactor broken error crash fails "
-    "failing bug".split()))
+    "failing bug submit upload".split()))
 
 
 # ------------------------------------------------------------------ io utils
@@ -64,9 +71,13 @@ def load_config(ddir):
     if isinstance(user, dict):
         cfg.update({k: v for k, v in user.items() if k in DEFAULTS})
     try:
-        cfg["top_k"] = max(1, min(3, int(cfg["top_k"])))
+        cfg["top_k"] = max(1, min(HARD_MAX_K, int(cfg["top_k"])))
     except (TypeError, ValueError):
         cfg["top_k"] = DEFAULTS["top_k"]
+    try:
+        cfg["max_chars"] = max(120, min(600, int(cfg["max_chars"])))
+    except (TypeError, ValueError):
+        cfg["max_chars"] = DEFAULTS["max_chars"]
     return cfg
 
 
@@ -81,7 +92,14 @@ def load_index(ddir):
 
 # ------------------------------------------------------------- prompt gates
 
+def prompt_size(prompt):
+    """Number of meaningful words (filler removed)."""
+    return len([w for w in re.findall(r"[A-Za-z0-9][\w.+#-]*", prompt.lower()) if w not in FILLER])
+
+
 def should_skip(prompt):
+    """Hard skips: commands, continuations, one-word prompts. Short prompts are
+    not skipped here; they must clear a stricter bar in pick()."""
     p = prompt.strip()
     if not p or p.startswith("/") or p.startswith("!") or p.startswith("#"):
         return True
@@ -89,20 +107,26 @@ def should_skip(prompt):
         return True
     if CONTINUATION.match(p):
         return True
-    words = [w for w in re.findall(r"[A-Za-z0-9][\w.+#-]*", p.lower()) if w not in FILLER]
-    return len(words) < 4
+    return prompt_size(p) < 2
 
 
 # ----------------------------------------------------------- project signals
 
+def _names_match(names, pattern):
+    if any(ch in pattern for ch in "*?"):
+        rx = re.compile("^" + re.escape(pattern).replace("\\*", ".*").replace("\\?", ".") + "$")
+        return any(rx.match(n) for n in names)
+    return pattern.rstrip("/") in names
+
+
 def project_signals(cwd, routes):
-    """Return {skill_name: weight} from files in the project directory."""
+    """Return ({skill_name: weight}, {platform_name}) from files in the project directory."""
     if not cwd or not os.path.isdir(cwd):
-        return {}
+        return {}, set()
     try:
         names = set(os.listdir(cwd))
     except OSError:
-        return {}
+        return {}, set()
     deps = set()
     pkgs = [os.path.join(cwd, "package.json")]
     for sub in ("apps", "packages"):
@@ -120,138 +144,226 @@ def project_signals(cwd, routes):
     for f in ("pyproject.toml", "requirements.txt", "Pipfile"):
         if f in names:
             pytext += srlib.read_head(os.path.join(cwd, f), 20000).lower()
+
+    def hit(rule):
+        if any(_names_match(names, f) for f in rule.get("files", [])):
+            return True
+        for d in rule.get("deps", []):
+            if (d.endswith("*") and any(x.startswith(d[:-1]) for x in deps)) or d in deps:
+                return True
+        return any(w in pytext for w in rule.get("python", []))
+
     out = {}
     for rule in routes.get("rules", []):
-        hit = False
-        for f in rule.get("files", []):
-            if any(ch in f for ch in "*?"):
-                rx = re.compile("^" + re.escape(f).replace("\\*", ".*").replace("\\?", ".") + "$")
-                if any(rx.match(n) for n in names):
-                    hit = True
-            elif f.rstrip("/") in names:
-                hit = True
-        for d in rule.get("deps", []):
-            if d.endswith("*"):
-                if any(x.startswith(d[:-1]) for x in deps):
-                    hit = True
-            elif d in deps:
-                hit = True
-        for w in rule.get("python", []):
-            if w in pytext:
-                hit = True
-        if hit:
+        if hit(rule):
             for s in rule.get("skills", []):
                 out[s] = max(out.get(s, 0), float(rule.get("weight", 1.0)))
-    return out
+    plats = set(p for p, spec in (routes.get("platforms") or {}).items() if hit(spec))
+    return out, plats
+
+
+def prompt_platforms(qraw_tokens, qtext, routes):
+    plats = set()
+    for p, spec in (routes.get("platforms") or {}).items():
+        for w in spec.get("prompt", []):
+            if (" " in w and w in qtext) or w in qraw_tokens:
+                plats.add(p)
+                break
+    return plats
 
 
 # ------------------------------------------------------------------ scoring
 
-def score_all(prompt, idx, signals, extra_skills=()):
-    qtoks = srlib.tokens(prompt)
-    qset = set(qtoks)
-    qphrase = " " + " ".join(qtoks) + " "
-    qraw = prompt.lower()
+class Query(object):
+    def __init__(self, prompt, idx):
+        prompt = srlib.rewrite(prompt)
+        self.text = prompt.lower()
+        self.toks = srlib.tokens(prompt)
+        self.set = set(self.toks)
+        self.exp = set(srlib.expand(self.toks, prompt)) - self.set
+        # parts of a compound ('react', 'native' of 'react-native') count at reduced weight
+        self.parts = srlib.compound_parts(prompt) - set(srlib.tokens(re.sub(r"\S*[-./]\S*", " ", prompt)))
+        self.raw = set(srlib.raw_tokens(prompt))
+        self.phrase = " " + " ".join(self.toks) + " "
+        self.bigrams = srlib.bigrams(self.toks)
+        self.dir = srlib.directional(prompt)
+        idf = idx["idf"]
+        # rare = specific vocabulary (few skills mention it)
+        self.rare = set(t for t in self.set if t not in srlib.WEAK and idf.get(t, 0) >= 3.2)
+
+
+def score_skill(q, s, idx, signals, platforms, build_intent):
     idf = idx["idf"]
     avgdl = idx["avgdl"] or 1.0
-    build_intent = bool(qset & BUILD_INTENT)
+    score = 0.0
+    matched = set()
+    tf, dl = s["tf"], s["dl"] or 1
+    norm = K1 * (1 - B + B * dl / avgdl)
+    name_toks = s["name_toks"]
+    rare_name = False
+    for t, weight in [(t, 0.4 if t in q.parts else 1.0) for t in q.set] + [(t, 0.5) for t in q.exp]:
+        w = idf.get(t, 2.0) * weight
+        if w >= VERY_RARE_IDF:
+            w *= 1.5   # a term only one or two skills mention is a strong discriminator
+        f = tf.get(t)
+        hitf = False
+        if f:
+            score += w * f * (K1 + 1) / (f + norm)
+            hitf = True
+        if t in name_toks:
+            score += 2.2 * w
+            if t in q.rare and t == s.get("first"):
+                # specific beats generic: a rare tech word that leads the skill's name
+                score += 1.5 * w
+                rare_name = True
+            hitf = True
+        elif t in s["kw"]:
+            score += 0.6 * w
+            if t in q.rare and len(s["kw"]) <= 30:
+                score += 0.8 * w   # rare word from a short, explicit trigger list
+            hitf = True
+        if hitf:
+            matched.add(t)
+    name_hit = multi_hit = False
+    np_ = s.get("name_phrase") or ""
+    if np_ and (" %s " % np_) in q.phrase:
+        if " " in np_:
+            score += 6.0
+            name_hit = multi_hit = True
+        elif len(np_) >= 4 and np_ not in srlib.WEAK:
+            score += min(6.0, 1.2 * idf.get(np_, 2.0))  # one-word names: scaled by specificity
+            name_hit = True
+    elif len(s["base"]) >= 5 and s["base"] in q.text and re.search(
+            r"(?<![\w-])%s(?![\w-])" % re.escape(s["base"]), q.text):
+        score += 6.0
+        name_hit = multi_hit = "-" in s["base"]
+        name_hit = True
+    ph_hits = sum(1 for ph in s["phrases"] if (" %s " % ph) in q.phrase)
+    score += min(ph_hits, 3) * 3.0
+    bg = len(q.bigrams.intersection(s.get("bigrams", ())))
+    score += min(bg, 2) * 2.0
+    # direction: 'page into Figma' vs 'Figma into code'
+    sdir = s.get("dir") or {}
+    wrong_dir = False
+    for d in q.dir:
+        kind, x = d.split(":", 1)
+        if x in srlib.WEAK or idf.get(x, 0) < 2.0:
+            continue
+        opp = ("from:" if kind == "to" else "to:") + x
+        a, b = sdir.get(d, 0), sdir.get(opp, 0)
+        if a or b:
+            aff = (a - b) / float(a + b + 1)
+            score += 2.5 * aff * idf.get(x, 2.0) / 2.0
+            if aff < -0.3:
+                wrong_dir = True
+    if wrong_dir:
+        score *= WRONG_DIRECTION_PENALTY
+    if q.set & set(s.get("neg", ())) and not name_hit:
+        score *= NEGATIVE_PENALTY
+    strong = [t for t in matched if t not in srlib.WEAK and idf.get(t, 2.0) >= 1.5]
+    evidence = len(strong) + len([t for t in matched if t in srlib.WEAK and t in name_toks])
+    if bg:
+        evidence += 1
+    sig = signals.get(s["name"]) or signals.get(s["base"])
+    plat = s.get("platform")
+    plat_ok = plat is None or plat in platforms
+    distinct = [t for t in name_toks if t not in srlib.WEAK and t not in srlib.NAME_GENERIC]
+    qall = q.set | q.exp
+    fam = s.get("family")
+    if not name_hit and not sig and not (plat and plat_ok):
+        if distinct and not (set(distinct) & qall):
+            score *= SPECIALISATION_PENALTY
+        elif fam and fam not in qall:
+            score *= SPECIALISATION_PENALTY   # seo-*, caveman-* ... family word absent
+    gated = not plat_ok and not multi_hit
+    if gated:
+        score *= PLATFORM_PENALTY
+    if sig and plat_ok:
+        if strong and build_intent:
+            score *= 1.0 + 0.5 * sig
+            score += 3.0 * sig
+            evidence += 1      # building in this stack: the project itself is evidence
+        elif strong:
+            score *= 1.0 + 0.35 * sig
+            score += 2.0 * sig
+        elif build_intent and matched:
+            score += 2.5 * sig
+    rare_hit = bool(q.rare & matched) or name_hit
+    return score, evidence, name_hit or ph_hits > 0 or rare_name, rare_hit, sorted(matched), gated
+
+
+def score_all(prompt, idx, signals, extra_skills=(), platforms=frozenset()):
+    q = Query(prompt, idx)
+    build_intent = bool(q.set & BUILD_INTENT)
     results = []
     for s in list(idx["skills"]) + list(extra_skills):
-        score = 0.0
-        matched = set()
-        tf, dl = s["tf"], s["dl"] or 1
-        norm = K1 * (1 - B + B * dl / avgdl)
-        for t in qset:
-            w = idf.get(t, 2.0)
-            f = tf.get(t)
-            if f:
-                score += w * f * (K1 + 1) / (f + norm)
-                matched.add(t)
-            if t in s["name_toks"]:
-                score += 2.2 * w
-                matched.add(t)
-            elif t in s["kw"]:
-                score += 0.6 * w
-                matched.add(t)
-        name_hit = False
-        np_ = s.get("name_phrase") or ""
-        if np_ and (" %s " % np_) in qphrase:
-            # multi-word names always count; a one-word name only if it is specific
-            if " " in np_ or (len(np_) >= 4 and np_ not in srlib.WEAK):
-                score += 6.0
-                name_hit = True
-        elif len(s["base"]) >= 5 and s["base"] in qraw and re.search(
-                r"(?<![\w-])%s(?![\w-])" % re.escape(s["base"]), qraw):
-            score += 6.0
-            name_hit = True
-        ph_hits = 0
-        for ph in s["phrases"]:
-            if (" %s " % ph) in qphrase:
-                ph_hits += 1
-        score += min(ph_hits, 3) * 3.0
-        strong = [t for t in matched if t not in srlib.WEAK and idf.get(t, 2.0) >= 1.5]
-        # evidence = specific terms + generic words that are part of the skill's own name
-        evidence = len(strong) + len([t for t in matched if t in srlib.WEAK and t in s["name_toks"]])
-        sig = signals.get(s["name"]) or signals.get(s["base"])
-        # Specialisation check: a skill named after a specific technology/domain
-        # ("web3-testing", "terraform-engineer") is only a confident match when
-        # that domain word is in the prompt or the project signals it.
-        distinct = [t for t in s["name_toks"] if t not in srlib.WEAK and t not in srlib.NAME_GENERIC]
-        if distinct and not name_hit and not sig and not (set(distinct) & qset):
-            score *= SPECIALISATION_PENALTY
-        if sig:
-            if strong:
-                score *= 1.0 + 0.35 * sig
-                score += 2.0 * sig
-            elif build_intent and matched:
-                score += 2.5 * sig
-        if score <= 0:
-            continue
-        results.append((score, s, evidence, name_hit or ph_hits > 0, sorted(matched)))
+        score, evidence, exact, rare_hit, matched, gated = score_skill(q, s, idx, signals, platforms, build_intent)
+        if score > 0:
+            results.append((score, s, evidence, exact, matched, rare_hit, gated))
     results.sort(key=lambda r: -r[0])
     return results
 
 
-def pick(results, cfg, skip_names):
-    """Confident, unambiguous picks only. Silence is the default outcome."""
+def pick(results, cfg, skip_names, short=False):
+    """Confident picks only; silence is the default outcome.
+
+    First pick: score >= min_score, enough specific evidence, and within
+    FIELD_RATIO of the best raw candidate. Extra picks (up to top_k): score >=
+    rel_cutoff x first pick and at least one specific term. Short prompts
+    (< 4 meaningful words) need a rare, specific hit and a higher score."""
     chosen = []
-    best = None
-    for score, s, evidence, exact, _m in results:
+    blockers = []   # higher-scoring candidates that were not confident
+    min_score = cfg["min_score"] * (1.3 if short else 1.0)
+    for score, s, evidence, exact, _m, rare_hit, gated in results:
         name = s["dup_of"] or s["name"]
         if name in skip_names or s["name"] in skip_names or name in cfg["exclude"] or s["name"] in cfg["exclude"]:
             continue
         if any(c[1] == name for c in chosen):
             continue
-        if best is None:
-            best = score
-        if score < FIELD_RATIO * best:
-            break  # everything below is clearly weaker than the best candidate
-        if chosen and score < SECOND_RATIO * chosen[0][0]:
-            break
-        confident = score >= cfg["min_score"] and (evidence >= cfg["min_terms"] or exact)
-        if not confident:
+        if gated:
+            continue   # platform skill, but neither prompt nor project shows the platform
+        if not chosen:
+            ok = score >= min_score and (evidence >= cfg["min_terms"] or exact)
+            if short:
+                ok = ok and rare_hit
+            # ambiguity: an unrelated, higher-scoring but unconfident candidate means silence
+            if ok and any(b[0] * FIELD_RATIO > score and group(b[1]) != group(s) for b in blockers):
+                ok = False
+            if ok:
+                chosen.append((score, name, s))
+            else:
+                blockers.append((score, s))
+                if len(blockers) > 4:
+                    break
             continue
-        chosen.append((score, name, s))
+        if score < cfg["rel_cutoff"] * chosen[0][0]:
+            break
+        if (evidence >= 2 or exact) and score >= 0.6 * cfg["min_score"]:
+            chosen.append((score, name, s))
         if len(chosen) >= cfg["top_k"]:
             break
     return chosen
 
 
+def group(s):
+    return s.get("platform") or s.get("family") or s.get("plugin") or s["name"]
+
+
 def name_is_ambiguous(s, prompt_toks):
-    base_toks = set(srlib.tokens(s["base"].replace("-", " ")))
+    base_toks = set(s["name_toks"])
     return not (base_toks & prompt_toks)
 
 
 def render(chosen, prompt, cfg, by_name):
     ptoks = set(srlib.tokens(prompt))
     parts = []
-    for _, name, s in chosen:
+    for i, (_, name, s) in enumerate(chosen):
         canon = by_name.get(name, s)
         item = name
-        if name_is_ambiguous(canon, ptoks):
+        if i < 2 and name_is_ambiguous(canon, ptoks):
             d = canon["desc"]
             d = re.sub(r"^\W*(mandatory prerequisite|critical|important)\W*", "", d, flags=re.I)
-            d = re.sub(r"^(Framework \(OSS\)\.\s*)", "", d)
+            d = re.sub(r"^(Framework \(OSS\)\.\s*|EAS service \(paid\)\.\s*)", "", d)
             d = d.replace("**", "").strip()
             if len(d) > cfg["desc_chars"]:
                 d = d[: cfg["desc_chars"] - 1].rsplit(" ", 1)[0].rstrip(",;:-") + "…"
@@ -320,6 +432,11 @@ def project_skills(cwd):
     pdir = os.path.join(cwd or "", ".claude", "skills")
     if not cwd or not os.path.isdir(pdir):
         return []
+    try:
+        if os.path.realpath(pdir) == os.path.realpath(os.path.join(srlib.claude_dir(), "skills")):
+            return []   # cwd is the home dir: these are the user skills, already indexed
+    except OSError:
+        return []
     import build_index
     out = []
     for n, p in build_index.skill_dir_entries(pdir)[:60]:
@@ -339,7 +456,8 @@ def run(payload, ddir=None, persist=True):
     idx = load_index(ddir)
     cwd = payload.get("cwd") or ""
     routes = load_json(os.path.join(os.path.dirname(HERE), "routes.json"), {}) or {}
-    signals = project_signals(cwd, routes)
+    signals, platforms = project_signals(cwd, routes)
+    platforms |= prompt_platforms(set(srlib.raw_tokens(prompt)), prompt.lower(), routes)
     extra = project_skills(cwd)
     known = {s["name"] for s in idx["skills"]}
     extra = [s for s in extra if s["name"] not in known]
@@ -348,10 +466,10 @@ def run(payload, ddir=None, persist=True):
     if persist:
         scan_transcript(payload.get("transcript_path"), state)
     skip = set(state.get("suggested", [])) | set(state.get("used", []))
-    results = score_all(prompt, idx, signals, extra)
-    chosen = pick(results, cfg, skip)
+    results = score_all(prompt, idx, signals, extra, platforms)
+    chosen = pick(results, cfg, skip, short=prompt_size(prompt) < 4)
     if cfg.get("debug"):
-        sys.stderr.write("skill-router top: %s\n" % [(round(r[0], 1), r[1]["name"], r[2]) for r in results[:5]])
+        sys.stderr.write("skill-router top: %s\n" % [(round(r[0], 1), r[1]["name"], r[2], r[4]) for r in results[:6]])
     text = None
     if chosen:
         by_name = {s["name"]: s for s in idx["skills"]}

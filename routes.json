@@ -1,7 +1,7 @@
 {
-  "_comment": "Project-file signals. A hit nudges the listed skills (weight ~0.5-1.5); it never fires a suggestion on its own unless the prompt is a build/fix request with some term overlap.",
+  "_comment": "rules: project-file signals that nudge skills (never fire alone). platforms: skills that only get full weight when the prompt names the platform or the project shows it.",
   "rules": [
-    {"deps": ["expo", "expo-router", "react-native"], "files": ["app.json", "eas.json"], "skills": ["expo-router", "expo-native-ui", "expo-project-structure", "eas-workflows", "eas-app-stores", "react-native-expert", "expo-dev-client", "expo-upgrade"], "weight": 1.0},
+    {"deps": ["expo", "expo-router", "react-native"], "files": ["app.json", "eas.json"], "skills": ["expo-router", "expo-native-ui", "expo-project-structure", "eas-workflows", "eas-app-stores", "react-native-expert", "expo-dev-client", "expo-upgrade", "expo-ui"], "weight": 1.0},
     {"deps": ["next"], "files": ["next.config.js", "next.config.mjs", "next.config.ts"], "skills": ["nextjs-developer", "vercel:nextjs", "vercel:next-cache-components", "vercel:next-upgrade"], "weight": 1.0},
     {"deps": ["payload", "@payloadcms/*"], "skills": ["nextjs-developer", "vercel:nextjs"], "weight": 0.7},
     {"files": ["vercel.json", ".vercel"], "skills": ["vercel:env-vars", "vercel:env", "vercel:deployments-cicd", "vercel:vercel-cli", "vercel:deploy", "vercel:vercel-functions"], "weight": 1.0},
@@ -27,5 +27,15 @@
     {"files": ["Dockerfile", "docker-compose.yml", "fly.toml"], "skills": ["devops-engineer"], "weight": 0.5},
     {"files": ["*.tf"], "skills": ["terraform-engineer"], "weight": 1.0},
     {"deps": ["drizzle-orm", "pg", "prisma", "@neondatabase/serverless"], "skills": ["postgres-pro"], "weight": 0.5}
-  ]
+  ],
+  "platforms": {
+    "vercel-next": {"skills": ["vercel:next*", "vercel:turbopack", "vercel:react-best-practices"], "prompt": ["vercel", "next", "nextjs", "turbopack", "app router", "react"], "deps": ["next"], "files": ["vercel.json", ".vercel", "next.config.js", "next.config.mjs", "next.config.ts"]},
+    "vercel-libs": {"skills": ["vercel:ai-sdk", "vercel:chat-sdk", "vercel:flags-sdk", "vercel:workflow", "vercel:shadcn", "vercel:ai-gateway"], "prompt": ["vercel", "ai sdk", "chat sdk", "flags sdk", "feature flag", "workflow", "shadcn", "ai gateway"], "deps": ["ai", "@ai-sdk/*", "chat", "flags", "workflow"], "files": ["vercel.json", ".vercel", "components.json"]},
+    "vercel": {"skills": ["vercel:*"], "prompt": ["vercel"], "files": ["vercel.json", ".vercel"]},
+    "expo": {"skills": ["expo-*", "eas-*"], "prompt": ["expo", "eas", "react native", "react-native", "testflight", "app store", "play store", "google play", "ios", "android", "simulator", "native"], "deps": ["expo", "react-native"], "files": ["eas.json"]},
+    "figma": {"skills": ["figma:*"], "prompt": ["figma", "figjam"]},
+    "higgsfield": {"skills": ["higgsfield-*"], "prompt": ["higgsfield", "video", "image", "photo", "photoshoot", "3d", "ugc", "animate"]},
+    "shopify": {"skills": ["shopify-expert"], "prompt": ["shopify", "liquid"], "files": ["shopify.theme.toml", "shopify.app.toml"]},
+    "salesforce": {"skills": ["salesforce-developer"], "prompt": ["salesforce", "apex", "lwc", "soql"], "files": ["sfdx-project.json"]}
+  }
 }

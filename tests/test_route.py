@@ -51,7 +51,7 @@ EVERYDAY = [
     "update the README with the new install steps",
     "the login page crashes on safari, can you look",
     "let's pause here, write down where we are",
-    "send an email to Jamie about the invoice",
+    "send an email to Alex about the invoice",
     "add a dark mode toggle to the settings page",
     "create a dockerfile for this fastapi service",
     "the useEffect runs twice on mount, is that expected?",
@@ -99,7 +99,7 @@ class RoutingTests(unittest.TestCase):
             text = suggest(prompt)
             if text:
                 self.assertLessEqual(len(text), route.DEFAULTS["max_chars"])
-                self.assertLessEqual(len(names_in(text)), 3)
+                self.assertLessEqual(len(names_in(text)), route.HARD_MAX_K)
 
     def test_token_budget(self):
         prompts = [p for p, _ in EXPECTED] + SILENT + EVERYDAY
@@ -172,6 +172,44 @@ class HookContractTests(unittest.TestCase):
         self.assertLess(sorted(times)[len(times) // 2], 300)
 
 
+class MatchingFeatureTests(unittest.TestCase):
+    def test_direction_features(self):
+        d = srlib.directional("push this page into Figma")
+        self.assertIn("to:figma", d)
+        d = srlib.directional("turn this Figma frame into code")
+        self.assertIn("from:figma", d)
+        self.assertIn("to:code", d)
+
+    def test_negative_clause_split(self):
+        pos, neg = srlib.split_negative("Generate images and video. NOT for: TTS or games. Use when asked.")
+        self.assertNotIn("TTS", pos)
+        self.assertIn("TTS", neg)
+        self.assertIn("Use when asked", pos)
+        _, neg = srlib.split_negative("Design guidance. Do NOT call it for dashboards.")
+        self.assertIn("dashboards", neg)
+
+    def test_aliases(self):
+        self.assertIn("kubernet", srlib.tokens("add a k8s ingress"))
+        self.assertIn("terraform", srlib.tokens("tf plan"))
+        self.assertIn("github", srlib.tokens("gh actions"))
+        self.assertIn("postgr", srlib.tokens("pg index"))
+
+    def test_platform_gate(self):
+        if "vercel:status" not in NAMES:
+            self.skipTest("vercel plugin not installed")
+        plain = tempfile.mkdtemp(dir=TMP)
+        self.assertNotIn("vercel:status", names_in(suggest("what's the status of the deploy?", cwd=plain)))
+        proj = tempfile.mkdtemp(dir=TMP)
+        with open(os.path.join(proj, "vercel.json"), "w") as f:
+            f.write("{}")
+        self.assertIn("vercel:status", names_in(suggest("what's the status of the deploy?", cwd=proj)))
+
+    def test_short_prompt_needs_rare_hit(self):
+        self.assertIsNone(suggest("fix the bug"))
+        if "eas-app-stores" in NAMES:
+            self.assertIn("eas-app-stores", names_in(suggest("upload the build to testflight")))
+
+
 class ParserTests(unittest.TestCase):
     def test_frontmatter_variants(self):
         cases = {
@@ -187,7 +225,7 @@ class ParserTests(unittest.TestCase):
                 self.assertEqual(srlib.parse_frontmatter(text).get("description"), want)
 
     def test_skip_gates(self):
-        for p in ["/compact", "ok", "go on", "do it", "✨", "yes please", "lgtm"]:
+        for p in ["/compact", "ok", "go on", "do it", "✨", "yes please", "lgtm", "ok, go ahead", "thanks!"]:
             self.assertTrue(route.should_skip(p), p)
         self.assertFalse(route.should_skip("add a new tab screen with expo router"))
 

@@ -1,0 +1,87 @@
+{
+  "_doc": "Skills the Skill tool exposes without a SKILL.md on disk. Static list written by hand; it may drift from what a given Claude Code build or account offers. Disable with {\"builtins\": false} in config.json. Entries are skipped when a skill of the same name exists on disk.",
+  "groups": [
+    {
+      "requires": "claude-code",
+      "skills": [
+        {
+          "name": "code-review",
+          "description": "Review the current diff, a PR, branch or path for correctness bugs, with optional fixes or PR comments. Use for code review, review this diff, review the PR before merge."
+        },
+        {
+          "name": "security-review",
+          "description": "Security review of pending changes on the current branch: vulnerabilities, injection, auth flaws, secrets. Use for security review, security audit of a diff."
+        },
+        {
+          "name": "simplify",
+          "description": "Review changed code for reuse, simplification, efficiency and cleanup, then apply the fixes. Quality only, not bug hunting. Use to simplify, clean up or tidy recent changes."
+        },
+        {
+          "name": "run",
+          "description": "Launch and drive the project's app to see a change working: run, start, screenshot the app, confirm a change in the real app rather than only tests."
+        },
+        {
+          "name": "loop",
+          "description": "Run a prompt or slash command on a recurring interval, e.g. check the deploy every 5 minutes, poll for status, keep running a command repeatedly."
+        },
+        {
+          "name": "schedule",
+          "description": "Create, update, list or run scheduled cloud agents (routines) on a cron schedule, or a one-time scheduled run at a given time."
+        },
+        {
+          "name": "update-config",
+          "description": "Configure the Claude Code harness via settings.json: hooks for automated behaviors, permissions, allow commands, env vars, settings.local.json changes."
+        },
+        {
+          "name": "keybindings-help",
+          "description": "Customize Claude Code keyboard shortcuts: rebind keys, chord bindings, edit keybindings.json."
+        },
+        {
+          "name": "fewer-permission-prompts",
+          "description": "Scan transcripts for common read-only tool calls and add an allowlist to project settings to reduce permission prompts."
+        },
+        {
+          "name": "init",
+          "description": "Initialize a CLAUDE.md file with codebase documentation for a repository."
+        },
+        {
+          "name": "claude-api",
+          "description": "Reference for the Claude API and Anthropic SDK: model ids, pricing, streaming, tool use, prompt caching, token counting, MCP, agents, model migration. Use when code calls Claude or Anthropic models."
+        },
+        {
+          "name": "dataviz",
+          "description": "Design guidance for any chart, graph, plot, dashboard or data visualization in any medium: chart colors, palettes, stat tiles, sparklines, heatmaps, legends, axes. Triggers on: chart, graph, plot, data viz, visualization, dashboard, sparkline, heatmap."
+        }
+      ]
+    },
+    {
+      "requires": "claude-ai-login",
+      "skills": [
+        {
+          "name": "anthropic-skills:pdf",
+          "description": "Work with PDF files: read or extract text and tables, merge, split, rotate, watermark, create PDFs, fill PDF forms, encrypt, OCR scanned PDFs."
+        },
+        {
+          "name": "anthropic-skills:docx",
+          "description": "Create, read and edit Word documents (.docx): reports, letters, memos with formatting, tables, tracked changes and comments."
+        },
+        {
+          "name": "anthropic-skills:xlsx",
+          "description": "Create, read and edit Excel spreadsheets (.xlsx, .csv): formulas, formatting, charts, financial models, budgets, data cleanup."
+        },
+        {
+          "name": "anthropic-skills:pptx",
+          "description": "Create, read and edit PowerPoint presentations (.pptx): slide decks, pitch decks, layouts, speaker notes, templates."
+        },
+        {
+          "name": "anthropic-skills:deep-research",
+          "description": "Multi-source research with a synthesized narrative report: compare options, analyze markets, trends, literature reviews, competitive analysis."
+        },
+        {
+          "name": "anthropic-skills:skill-creator",
+          "description": "Create, edit, evaluate and improve agent skills (SKILL.md), measure skill performance, optimize skill descriptions for triggering."
+        }
+      ]
+    }
+  ]
+}
