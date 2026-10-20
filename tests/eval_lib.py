@@ -68,6 +68,23 @@ def parse_names(text):
     return [part.split(" (", 1)[0].strip() for part in body.split("; ") if part.strip()]
 
 
+def class_skill(cls, s, prompt):
+    """Does suggested skill s belong to the miss class a negative look-alike must not fire?"""
+    if s is None:
+        return False
+    if cls == "A":   # matched only through everyday words of its name
+        import srlib
+        hit = set(s["name_toks"]) & set(srlib.tokens(prompt))
+        return bool(hit) and hit <= set(s.get("common_name", ()))
+    if cls == "B":
+        return s.get("category") == "security" or s["name"] in ("solidity-security", "solana-vulnerability-scanner")
+    if cls == "C":
+        return s.get("category") == "seo"
+    if cls == "D":
+        return s["name"] == "image-to-code" or s.get("category") == "media-generation"
+    return False
+
+
 def metrics(h, data=None):
     data = data or load_set()
     out = {}
@@ -114,13 +131,16 @@ def metrics(h, data=None):
                 d["fails"].append((it["p"], names))
         out[split] = per
     negs = {}
-    for split, items in (("dev", [s for s in data["silent"] if isinstance(s, dict) and s.get("cls")]),
+    by = {s["name"]: s for s in h.index["skills"]}
+    for split, items in (("dev", data.get("class_neg_dev", [])),
                          ("holdout_v4", data.get("class_neg_holdout_v4", []))):
         for it in items:
             names = h.suggest(it)[1]
-            d = negs.setdefault((split, it["cls"]), {"n": 0, "fired": 0, "fires": []})
+            hits = [n for n in names if class_skill(it["cls"], by.get(n), it["p"])]
+            d = negs.setdefault((split, it["cls"]), {"n": 0, "fired": 0, "fires": [], "any": 0})
             d["n"] += 1
-            if names:
+            d["any"] += bool(names)
+            if hits:
                 d["fired"] += 1
                 d["fires"].append((it["p"], names))
     out["class_neg"] = negs
@@ -165,7 +185,8 @@ def main():
         for (sp, c), d in sorted(m["class_neg"].items()):
             if sp == "holdout_v4" and "--holdout" not in sys.argv:
                 continue
-            print("neg %-10s %s n=%d false_fire=%.0f%%" % (sp, c, d["n"], 100.0 * d["fired"] / d["n"]))
+            print("neg %-10s %s n=%d class_false_fire=%.0f%% any_hint=%.0f%%" % (
+                sp, c, d["n"], 100.0 * d["fired"] / d["n"], 100.0 * d["any"] / d["n"]))
         print("silent   n=%d false_fire=%.0f%% %s" % (m["silent"]["n"], m["silent"]["false_fire"] * 100, m["silent"]["fires"]))
         e = m["everyday"]
         print("everyday n=%d fire=%.0f%% avg_chars=%.1f max_chars=%d" % (e["n"], e["fire"] * 100, e["avg_chars"], e["max_chars"]))

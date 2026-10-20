@@ -1,5 +1,5 @@
 {
-  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. class_dev / class_holdout_v4: miss-class variation sets (A common-word names, B security intent, C SEO intent, D same-category extras); pass = an accepted skill is suggested (if any listed), no 'forbid' skill appears, and at most 'max_names' names. class_holdout_v4 and class_neg_holdout_v4 were frozen before 0.4.0 tuning. holdout_v3/v2/v1 are earlier holdouts minus prompts moved to dev after tuning on them. silent items (strings or {p, cls}) must produce no hint.",
+  "_doc": "Labeled routing eval. 'accept' = any of these skills counts as a hit. class_dev / class_holdout_v4: miss-class variation sets (A common-word names, B security intent, C SEO intent, D same-category extras); pass = an accepted skill is suggested (if any listed), no 'forbid' skill appears, and at most 'max_names' names. class_holdout_v4 and class_neg_holdout_v4 were frozen before 0.4.0 tuning. holdout_v3/v2/v1 are earlier holdouts minus prompts moved to dev after tuning on them. silent items must produce no hint. class_neg_* are look-alikes that must not fire their class (A: a skill matched only through everyday words in its name; B: security skills; C: seo-* skills; D: image-to-code / image generation); other skills may still fire.",
   "dev": [
     {
       "p": "add a new tab screen with expo router",
@@ -1244,6 +1244,104 @@
       "max_names": 2
     }
   ],
+  "class_neg_dev": [
+    {
+      "p": "it's a low priority, do it later",
+      "cls": "A"
+    },
+    {
+      "p": "use a safe default for the timeout",
+      "cls": "A"
+    },
+    {
+      "p": "the master branch is protected",
+      "cls": "A"
+    },
+    {
+      "p": "keep the PR lean",
+      "cls": "A"
+    },
+    {
+      "p": "set the font weight to high contrast",
+      "cls": "A"
+    },
+    {
+      "p": "do a quick sanity check on the numbers",
+      "cls": "A"
+    },
+    {
+      "p": "force push the branch to origin",
+      "cls": "B"
+    },
+    {
+      "p": "lock the DB row while updating the balance",
+      "cls": "B"
+    },
+    {
+      "p": "add a key to the list items to silence the React warning",
+      "cls": "B"
+    },
+    {
+      "p": "hash the file names for cache busting",
+      "cls": "B"
+    },
+    {
+      "p": "expose port 3000 in docker compose",
+      "cls": "B"
+    },
+    {
+      "p": "limit the rate of the carousel autoplay",
+      "cls": "B"
+    },
+    {
+      "p": "design the database schema for invoices",
+      "cls": "C"
+    },
+    {
+      "p": "build a search feature in the app",
+      "cls": "C"
+    },
+    {
+      "p": "rank the leaderboard by score",
+      "cls": "C"
+    },
+    {
+      "p": "sort the table by title",
+      "cls": "C"
+    },
+    {
+      "p": "search the logs for the error",
+      "cls": "C"
+    },
+    {
+      "p": "the traffic light component colors are off",
+      "cls": "C"
+    },
+    {
+      "p": "take a screenshot of the page",
+      "cls": "D"
+    },
+    {
+      "p": "compress the PNGs in the public folder",
+      "cls": "D"
+    },
+    {
+      "p": "the screenshot test is failing",
+      "cls": "D"
+    },
+    {
+      "p": "show the user's avatar image in the header",
+      "cls": "D"
+    },
+    {
+      "p": "crop the profile photo to a square",
+      "cls": "D"
+    },
+    {
+      "p": "convert the date to ISO format",
+      "cls": "D"
+    }
+  ],
   "class_neg_holdout_v4": [
     {
       "p": "the full name field should be required",
@@ -1719,103 +1817,7 @@
       "fixture": "plain"
     },
     "explain this to me",
-    "can you explain that again, slower",
-    {
-      "p": "it's a low priority, do it later",
-      "cls": "A"
-    },
-    {
-      "p": "use a safe default for the timeout",
-      "cls": "A"
-    },
-    {
-      "p": "the master branch is protected",
-      "cls": "A"
-    },
-    {
-      "p": "keep the PR lean",
-      "cls": "A"
-    },
-    {
-      "p": "set the font weight to high contrast",
-      "cls": "A"
-    },
-    {
-      "p": "do a quick sanity check on the numbers",
-      "cls": "A"
-    },
-    {
-      "p": "force push the branch to origin",
-      "cls": "B"
-    },
-    {
-      "p": "lock the DB row while updating the balance",
-      "cls": "B"
-    },
-    {
-      "p": "add a key to the list items to silence the React warning",
-      "cls": "B"
-    },
-    {
-      "p": "hash the file names for cache busting",
-      "cls": "B"
-    },
-    {
-      "p": "expose port 3000 in docker compose",
-      "cls": "B"
-    },
-    {
-      "p": "limit the rate of the carousel autoplay",
-      "cls": "B"
-    },
-    {
-      "p": "design the database schema for invoices",
-      "cls": "C"
-    },
-    {
-      "p": "build a search feature in the app",
-      "cls": "C"
-    },
-    {
-      "p": "rank the leaderboard by score",
-      "cls": "C"
-    },
-    {
-      "p": "sort the table by title",
-      "cls": "C"
-    },
-    {
-      "p": "search the logs for the error",
-      "cls": "C"
-    },
-    {
-      "p": "the traffic light component colors are off",
-      "cls": "C"
-    },
-    {
-      "p": "take a screenshot of the page",
-      "cls": "D"
-    },
-    {
-      "p": "compress the PNGs in the public folder",
-      "cls": "D"
-    },
-    {
-      "p": "the screenshot test is failing",
-      "cls": "D"
-    },
-    {
-      "p": "show the user's avatar image in the header",
-      "cls": "D"
-    },
-    {
-      "p": "crop the profile photo to a square",
-      "cls": "D"
-    },
-    {
-      "p": "convert the date to ISO format",
-      "cls": "D"
-    }
+    "can you explain that again, slower"
   ],
   "everyday": [
     "commit this and push to main",

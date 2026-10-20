@@ -42,6 +42,17 @@ class EvalTests(unittest.TestCase):
     def test_silent_set(self):
         self.assertLessEqual(self.m["silent"]["false_fire"], 0.1, self.m["silent"]["fires"])
 
+    def test_miss_classes_dev(self):
+        for cls, d in self.m["class_dev"].items():
+            with self.subTest(cls=cls):
+                self.assertGreaterEqual(d["pass"] / float(d["n"]), 0.9, d["fails"])
+
+    def test_class_negatives_dev(self):
+        for (split, cls), d in self.m["class_neg"].items():
+            if split == "dev":
+                with self.subTest(cls=cls):
+                    self.assertEqual(d["fired"], 0, d["fires"])
+
     def test_budget(self):
         self.assertLessEqual(self.m["everyday"]["fire"], 0.35)
         self.assertLessEqual(self.m["all"]["avg_chars"], 80)

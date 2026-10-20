@@ -300,6 +300,38 @@ class V030RuleTests(unittest.TestCase):
         self.assertRegex(p.stdout, r"\(\d+\)")
 
 
+class V040RuleTests(unittest.TestCase):
+    """0.4.0: everyday name words, security / SEO intent lexicons, same-category extras."""
+
+    def test_intent_lexicon_lookalikes(self):
+        for p in ["force push the branch to origin", "inject the dependency into the service",
+                  "lock the DB row while updating", "rank the leaderboard by score",
+                  "add an index on the orders table", "build a search feature in the app"]:
+            with self.subTest(p=p):
+                self.assertFalse(srlib.intent_cats(p), p)
+        self.assertIn("security", srlib.intent_cats("protect the login from brute force"))
+        self.assertIn("security", srlib.intent_cats("check this for SQL injection"))
+        self.assertIn("seo", srlib.intent_cats("half our pages got deindexed"))
+        self.assertIn("seo", srlib.intent_cats("improve the meta descriptions"))
+
+    def test_common_name_words(self):
+        by = {s["name"]: s for s in INDEX["skills"]}
+        if "high-end-visual-design" in by:
+            self.assertIn("high", by["high-end-visual-design"]["common_name"])
+            self.assertNotIn("high-end-visual-design", names_in(suggest("write a Prometheus alert for high error rate")))
+            self.assertIn("high-end-visual-design", names_in(suggest("build a high-end luxury landing page for a watch brand")))
+        if "safe-refactor" in by:
+            self.assertNotIn("safe-refactor", names_in(suggest("use a safe default for the timeout value")))
+            self.assertIn("safe-refactor", names_in(suggest("refactor the payment service safely, behavior must not change")))
+
+    def test_visual_to_code_alone(self):
+        if "image-to-code" not in NAMES:
+            self.skipTest("image-to-code not installed")
+        for p in ["build the page from this screenshot", "turn this screenshot into a React component"]:
+            with self.subTest(p=p):
+                self.assertEqual(names_in(suggest(p)), ["image-to-code"])
+
+
 class ParserTests(unittest.TestCase):
     def test_frontmatter_variants(self):
         cases = {

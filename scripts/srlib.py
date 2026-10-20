@@ -2,7 +2,7 @@
 import os
 import re
 
-INDEX_VERSION = 6
+INDEX_VERSION = 7
 
 HOME = os.path.expanduser("~")
 
@@ -119,7 +119,7 @@ def stem(w):
         w = w[:-1]
     # derivational / inflectional (one pass)
     for suf, rep, minlen in (("ational", "ate", 8), ("ation", "ate", 7), ("ment", "", 7),
-                             ("ing", "", 5), ("ed", "", 5), ("ly", "", 6), ("ure", "", 7), ("age", "", 7),
+                             ("ing", "", 5), ("ed", "", 5), ("ly", "", 6), ("ure", "", 7), ("age", "", 7), ("ist", "", 8),
                              ("er", "", 7), ("ity", "", 6)):
         if w.endswith(suf) and len(w) >= minlen:
             w = w[: len(w) - len(suf)] + rep
@@ -289,6 +289,86 @@ FORMAT_INTENTS = [
 ]
 
 
+# Intent lexicons: phrasings that imply a topic whose skills describe it in other words.
+# Each is a regex over the prompt plus the terms it adds (scored like real prompt words,
+# slightly below full weight). Written as patterns, not single words, so look-alikes
+# ("force push", "inject the dependency", "rank the leaderboard") stay out.
+_SEC = re.compile(
+    r"\bbrute[- ]?forc\w*|\brate[- ]?limit\w*|\block(?:ing)? (?:out|accounts?|users?)\b|\baccount lock\w*|"
+    r"\bfailed (?:login|sign[- ]?in)s?(?: attempts?)?|\bcredential stuffing|\bpassword (?:guessing|spraying)|"
+    r"\b(?:sql|nosql|command|ldap|xpath|template|prompt|header) injection|\binject(?:ed|ing)? (?:sql|scripts?|code|commands?|html)\b|"
+    r"\bxss\b|\bcross[- ]site\b|\bcsrf\b|\bxsrf\b|\bssrf\b|\bidor\b|\bother users'? (?:data|invoices?|orders?|records?|files?)|"
+    r"\b(?:auth(?:entication|orization)?|login) bypass|\bbypass(?:ed|ing)? (?:the )?(?:auth\w*|login|permissions?)|"
+    r"\bsession (?:fixation|hijack\w*)|\bsecrets? (?:in|to|into) (?:the |our |a )?(?:repo|git|history|code)|"
+    r"\bcommitted (?:the |our )?(?:secrets?|keys?|credentials|passwords?)|"
+    r"\b(?:leak(?:ed)?|exposed?|hard[- ]?coded) (?:an? |our |the )?(?:api |secret |private |access )?(?:keys?|tokens?|secrets?|credentials|passwords?)|"
+    r"\b(?:api )?keys? (?:are |is |got )?(?:hard[- ]?coded|leaked|exposed)|\bowasp\b|\bpen ?test\w*|\bpenetration test|"
+    r"\bcves?\b|\bvulnerab\w*|\bharden\w*|\block (?:it |this |the \w+ )?down\b|\bsanitiz\w* (?:the )?(?:user )?input|"
+    r"\bescap\w* user input|\bpasswords? (?:are |is )?(?:hashed|hashing|stored in plain\w*)|\bhash(?:ed|ing)? passwords?|"
+    r"\bmd5\b|\bbcrypt\b|\bargon2\b|\bjwts? (?:\w+ )*(?:expire|expiry|secret|signing|alg)|\btokens? never expire|"
+    r"\bweak (?:tls|ssl|ciphers?)|\btls ciphers?|\breentranc\w*|\bfront[- ]?running\b|\baccess control\b|\bprivilege escalation", re.I)
+
+# Intent lexicons: phrasings that imply a topic whose skills describe it in other words.
+# (category, regex, added terms). Patterns, not single words, so look-alikes ("force push",
+# "inject the dependency", "rank the leaderboard", "index on the orders table") stay out.
+# The category gets a bonus; the terms point at the most specific skill's vocabulary.
+INTENT_LEXICONS = [
+    ("security", _SEC, ("security", "vulnerability", "secure")),
+    ("seo", re.compile(r"\bmeta (?:descriptions?|titles?|tags?)\b|\btitle tags?\b|\bon-?page (?:seo|optimi[sz]ation)\b", re.I),
+     ("seo", "on-page", "meta description", "title tag")),
+    ("seo", re.compile(r"\bsitemap(?:\.xml)?\b(?! screen| page in the (?:app|nav))", re.I), ("seo", "xml sitemap")),
+    ("seo", re.compile(r"\brobots\.txt\b|\bcrawl(?:ing|ed|er|ability)? (?:by )?(?:google|bots?)|\bgoogle (?:from )?crawl\w*|"
+                       r"\bcanonical (?:urls?|tags?|links?)\b|\b(?:de-?)?index(?:ed|ing)\b(?! (?:on|the|a) (?:\w+ )?(?:table|column))|"
+                       r"\bnot indexed\b|\bindexing coverage\b|\bcore web vitals\b", re.I),
+     ("seo", "technical seo", "crawlability", "indexability", "indexation")),
+    ("seo", re.compile(r"\bsearch console\b|\bgsc\b", re.I), ("seo", "search console", "google")),
+    ("seo", re.compile(r"\bstructured data\b|\brich (?:results|snippets)\b|\bschema markup\b|\bjson-?ld\b", re.I),
+     ("seo", "schema", "structured data")),
+    ("seo", re.compile(r"\bbacklinks?\b|\bwho links to us\b|\breferring domains\b|\blink building\b", re.I),
+     ("seo", "backlinks", "referring domains")),
+    ("seo", re.compile(r"\bkeyword research\b|\bkeywords? (?:for|to target)\b", re.I), ("seo", "keyword", "content brief")),
+    ("seo", re.compile(r"\borganic (?:traffic|search|rankings?|clicks)\b|\b(?:traffic|rankings?) (?:dropped|drop|fell|tanked)", re.I),
+     ("seo", "ranking", "drift", "traffic")),
+    ("seo", re.compile(r"\brank(?:s|ed|ing|ings)? (?:higher |better |well |#?1 )?(?:on|in) (?:google|search|bing)|"
+                       r"\brank (?:higher|better)\b|\brankings?\b(?! (?:by|of) (?:score|points))|\bserps?\b|\bsearch engines?\b", re.I),
+     ("seo", "ranking", "search engine", "content")),
+    ("seo", re.compile(r"\bhreflang\b", re.I), ("seo", "hreflang")),
+    ("seo", re.compile(r"\bai overviews?\b|\bgenerative engine\b|\bshow up in (?:google |)(?:chatgpt|perplexity|ai)\b|"
+                       r"\b(?:chatgpt|perplexity) (?:answers|citations|search)\b", re.I),
+     ("seo", "geo", "ai overviews", "ai search", "citation")),
+    ("seo", re.compile(r"\bgoogle (?:maps|business profile)\b|\blocal (?:pack|seo|search)\b", re.I), ("seo", "local", "maps")),
+    ("seo", re.compile(r"\bgoogle shopping\b|\bmerchant center\b", re.I), ("seo", "ecommerce", "product schema")),
+    ("seo", re.compile(r"\balt (?:text|tags?)\b", re.I), ("seo", "image", "alt text")),
+    ("seo", re.compile(r"\bprogrammatic (?:pages|landing pages|seo)\b|\bpages? for every (?:city|location|keyword)", re.I),
+     ("seo", "programmatic")),
+    ("seo", re.compile(r"\bcompetitor (?:pages|rankings)\b|\brankings? (?:with|against|vs\.?) competitors?", re.I),
+     ("seo", "competitor")),
+    ("infra-devops", re.compile(r"\balerts? (?:are |is )?(?:firing|fired|paging)|\balert(?:ing)? (?:rule|on|for)\b|\berror rates?\b|"
+                                r"\bp9[059] latency|\bslos?\b|\bslis?\b|\berror budget|\buptime\b|\bon-?call\b|\bgrafana\b|"
+                                r"\bprometheus\b|\bdatadog\b|\bpagerduty\b|\bopentelemetry\b|\botel\b|\bdistributed tracing\b", re.I),
+     ("monitoring", "alerting", "observability")),
+    (None, re.compile(r"\b(?:research|investigate|survey|compare)\b.{0,60}\b(?:with|cite|citing|including) (?:sources|citations|references)\b|"
+                      r"\bliterature review\b|\bmarket (?:research|analysis)\b|\bresearch report\b", re.I),
+     ("deep research", "multi-source", "report")),
+    (None, re.compile(r"\b(?:do not|don't|never) (?:truncate|skip|abbreviate|summari[sz]e|elide)|\bno placeholders\b|"
+                      r"\b(?:full|entire|complete|whole) (?:file|code|listing|implementation)\b", re.I),
+     ("truncation", "complete", "unabridged", "exhaustive")),
+]
+
+
+def intent_cats(text):
+    return set(c for c, rx, _a in INTENT_LEXICONS if c and rx.search(text))
+
+
+def intent_terms(text):
+    out = []
+    for _cat, rx, adds in INTENT_LEXICONS:
+        if rx.search(text):
+            for a in adds:
+                out.extend(tokens(a))
+    return out
+
+
 def format_intents(text):
     return set(k for k, rx in FORMAT_INTENTS if rx.search(text))
 
@@ -302,7 +382,7 @@ def split_camel(word):
     return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", word)
 
 
-def body_terms(body, limit=150):
+def body_terms(body, limit=100):
     """Low-weight terms from a SKILL.md body: headings and CamelCase API names in
     code (NativeTabs -> nativetab + native, tab)."""
     out = []

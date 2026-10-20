@@ -178,6 +178,7 @@ def extract(entry):
     s = from_description(entry, desc)
     body = text.split("---", 2)[-1] if text.startswith("---") else text
     s["body"] = sorted(set(srlib.body_terms(body)) - set(s["tf"]) - set(s["name_toks"]))
+    s["_low"] = text.lower()
     return s
 
 
@@ -231,7 +232,7 @@ def from_description(entry, desc):
     }
 
 
-_PRODUCT = re.compile(r"(?<=[\w,;(/\u2014-] )([A-Z][A-Za-z0-9]+(?: [A-Z][A-Za-z0-9]+)?)")
+_PRODUCT = re.compile(r"(?:(?<=[\w,;(/\u2014-] )|(?<=[a-z]/))([A-Z][A-Za-z0-9]+(?: [A-Z][A-Za-z0-9]+)?)")
 
 
 def products(desc):
@@ -271,6 +272,32 @@ def builtin_entries(mode="auto"):
     return out
 
 
+def common_words():
+    """Stemmed everyday-English words (data/common_english.txt)."""
+    out = set()
+    try:
+        with open(os.path.join(ROOT, "data", "common_english.txt"), encoding="utf-8") as f:
+            for line in f:
+                if not line.startswith("#"):
+                    out.update(srlib.stem(w) for w in line.split())
+    except OSError:
+        pass
+    return out
+
+
+def tag_common_name_words(skills, fulltext_df, n):
+    """Name words that are everyday English and are not used as a proper name in the
+    skill's own description ('Swift', 'Rust').
+    Such words never earn the rare-name bonus or prove a specialisation on their own."""
+    common = common_words()
+    for s in skills:
+        proper = set()
+        for ph in s.get("products", ()):
+            proper.update(ph.split())
+        s["common_name"] = sorted(t for t in s["name_toks"]
+                                  if t in common and t not in proper)
+
+
 def tag_categories(skills):
     """Rule-based topic category per skill (routes.json 'categories', first match wins):
     name/family/platform patterns first, then description keywords."""
@@ -292,6 +319,18 @@ def tag_categories(skills):
             if n > best_n:
                 best, best_n = c["name"], n
         s["category"] = best or "other"
+
+
+def compact(s):
+    """Shrink a skill entry for fast JSON loading: bigrams and body terms become
+    delimited strings (membership by substring), the description is trimmed."""
+    if isinstance(s.get("bigrams"), list):
+        s["bigrams"] = "|" + "|".join(s["bigrams"]) + "|"
+    if isinstance(s.get("body"), list):
+        s["body"] = " " + " ".join(s["body"]) + " "
+    if len(s.get("desc", "")) > 240:
+        s["desc"] = s["desc"][:240]
+    return s
 
 
 def category_intents():
@@ -377,6 +416,10 @@ def build(out_dir=None):
     mark_duplicates(skills)
     tag_platforms(skills)
     tag_categories(skills)
+    for s in skills:
+        s.pop("_low", None)
+    fdf = {}
+    tag_common_name_words(skills, fdf, len(skills))
     # family prefix: first name token shared by >= 3 skills (seo-*, caveman-*, expo-* ...)
     firsts = {}
     for s in skills:
@@ -397,6 +440,8 @@ def build(out_dir=None):
     for s in skills:
         for t in s.get("body", ()):
             bdf[t] = bdf.get(t, 0) + 1
+    for s in skills:
+        compact(s)
     n = len(skills)
     avgdl = sum(s["dl"] for s in skills) / float(n or 1)
     idx = {
@@ -408,6 +453,7 @@ def build(out_dir=None):
         "idf": {t: round(math.log(1 + (n - c + 0.5) / (c + 0.5)), 4) for t, c in df.items()},
         "bidf": {t: round(math.log(1 + (n - c + 0.5) / (c + 0.5)), 4) for t, c in bdf.items()},
         "cat_intents": category_intents(),
+        "common": sorted(common_words()),
         "skills": skills,
     }
     os.makedirs(out_dir, exist_ok=True)
