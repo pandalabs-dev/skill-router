@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# Local progress notes, never published
+.progress/
