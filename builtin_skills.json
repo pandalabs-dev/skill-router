@@ -59,19 +59,31 @@
       "skills": [
         {
           "name": "anthropic-skills:pdf",
-          "description": "Work with PDF files: read or extract text and tables, merge, split, rotate, watermark, create PDFs, fill PDF forms, encrypt, OCR scanned PDFs."
+          "description": "Work with PDF files: read or extract text and tables, merge, split, rotate, watermark, create PDFs, fill PDF forms, encrypt, OCR scanned PDFs.",
+          "formats": [
+            "pdf"
+          ]
         },
         {
           "name": "anthropic-skills:docx",
-          "description": "Create, read and edit Word documents (.docx): reports, letters, memos with formatting, tables, tracked changes and comments."
+          "description": "Create, read and edit Word documents (.docx): reports, letters, memos, meeting minutes, contracts, with formatting, tables, tracked changes and comments.",
+          "formats": [
+            "docx"
+          ]
         },
         {
           "name": "anthropic-skills:xlsx",
-          "description": "Create, read and edit Excel spreadsheets (.xlsx, .csv): formulas, formatting, charts, financial models, budgets, data cleanup."
+          "description": "Create, read and edit Excel spreadsheets (.xlsx, .csv): formulas, formatting, charts, financial models, budgets, data cleanup.",
+          "formats": [
+            "xlsx"
+          ]
         },
         {
           "name": "anthropic-skills:pptx",
-          "description": "Create, read and edit PowerPoint presentations (.pptx): slide decks, pitch decks, layouts, speaker notes, templates."
+          "description": "Create, read and edit PowerPoint presentations (.pptx): slide decks, pitch decks, board decks, layouts, speaker notes, templates.",
+          "formats": [
+            "pptx"
+          ]
         },
         {
           "name": "anthropic-skills:deep-research",

@@ -254,6 +254,52 @@ class FixRuleTests(unittest.TestCase):
         self.assertTrue(os.path.isdir(py))
 
 
+class V030RuleTests(unittest.TestCase):
+    """0.3.0: product nouns, file formats, body terms, categories, extra-name gates."""
+
+    def test_format_intents(self):
+        self.assertEqual(srlib.format_intents("make a Word document"), {"docx"})
+        self.assertEqual(srlib.format_intents("export it as an Excel spreadsheet"), {"xlsx"})
+        self.assertEqual(srlib.format_intents("a PowerPoint deck for the board"), {"pptx"})
+        self.assertEqual(srlib.format_intents("merge two PDFs"), {"pdf"})
+        self.assertEqual(srlib.format_intents("explain this word to me"), set())
+
+    def test_deck_collisions(self):
+        need = {"anthropic-skills:pptx", "slides", "figma:figma-use-slides"}
+        if not need <= NAMES:
+            self.skipTest("presentation skills not installed")
+        self.assertEqual(names_in(suggest("make a pitch deck for the seed round investors"))[:1], ["anthropic-skills:pptx"])
+        self.assertEqual(names_in(suggest("lay out the presentation in Figma Slides")), ["figma:figma-use-slides"])
+        self.assertEqual(names_in(suggest("build HTML slides with Chart.js for the quarterly review"))[:1], ["slides"])
+
+    def test_body_terms_split_camel_case(self):
+        terms = srlib.body_terms("# Tabs\nUse `NativeTabs` and <Stack.Screen />")
+        for t in ("nativetab", "nativ", "tab", "screen"):
+            self.assertIn(t, terms)
+
+    def test_categories_stored(self):
+        cats = {s["name"]: s.get("category") for s in INDEX["skills"]}
+        self.assertTrue(all(cats.values()))
+        if "seo-images" in cats:
+            self.assertEqual(cats["seo-images"], "seo")
+        if "image-to-code" in cats:
+            self.assertEqual(cats["image-to-code"], "design-frontend")
+
+    def test_extra_needs_category_intent(self):
+        if "image-to-code" not in NAMES:
+            self.skipTest("image-to-code not installed")
+        got = names_in(suggest("convert this screenshot into HTML and CSS"))
+        self.assertEqual(got[:1], ["image-to-code"])
+        self.assertNotIn("seo-images", got)
+
+    def test_list_cli(self):
+        env = dict(os.environ, SKILL_ROUTER_DATA=TMP)
+        p = subprocess.run([sys.executable, os.path.join(SCRIPTS, "build_index.py"), "--list"],
+                           capture_output=True, text=True, env=env, timeout=30)
+        self.assertEqual(p.returncode, 0)
+        self.assertRegex(p.stdout, r"\(\d+\)")
+
+
 class ParserTests(unittest.TestCase):
     def test_frontmatter_variants(self):
         cases = {

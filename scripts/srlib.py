@@ -2,7 +2,7 @@
 import os
 import re
 
-INDEX_VERSION = 5
+INDEX_VERSION = 6
 
 HOME = os.path.expanduser("~")
 
@@ -119,7 +119,7 @@ def stem(w):
         w = w[:-1]
     # derivational / inflectional (one pass)
     for suf, rep, minlen in (("ational", "ate", 8), ("ation", "ate", 7), ("ment", "", 7),
-                             ("ing", "", 5), ("ed", "", 5), ("ly", "", 6), ("ure", "", 7),
+                             ("ing", "", 5), ("ed", "", 5), ("ly", "", 6), ("ure", "", 7), ("age", "", 7),
                              ("er", "", 7), ("ity", "", 6)):
         if w.endswith(suf) and len(w) >= minlen:
             w = w[: len(w) - len(suf)] + rep
@@ -278,6 +278,52 @@ def name_conversion(base):
     if src and dst:
         return [sorted(src), sorted(dst)]
     return None
+
+
+# File-format intents: the format a prompt asks to produce or edit.
+FORMAT_INTENTS = [
+    ("docx", re.compile(r"\b(?:word (?:doc|document|file)s?|ms word|\.docx|docx)\b", re.I)),
+    ("xlsx", re.compile(r"\b(?:excel|spreadsheets?|\.xlsx|xlsx|google sheets?|csv (?:to|into) (?:a )?sheet|workbook)\b", re.I)),
+    ("pptx", re.compile(r"\b(?:power ?point|\.pptx|pptx|keynote|(?:slide|pitch|board|investor) decks?|decks? for)\b", re.I)),
+    ("pdf", re.compile(r"\b(?:pdfs?|\.pdf)\b", re.I)),
+]
+
+
+def format_intents(text):
+    return set(k for k, rx in FORMAT_INTENTS if rx.search(text))
+
+
+_CAMEL = re.compile(r"\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b|\b[a-z]+(?:[A-Z][a-z0-9]+)+\b")
+_SPAN = re.compile(r"`([^`\n]{2,80})`")
+_JSX = re.compile(r"<([A-Z][A-Za-z0-9.]+)")
+
+
+def split_camel(word):
+    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", word)
+
+
+def body_terms(body, limit=150):
+    """Low-weight terms from a SKILL.md body: headings and CamelCase API names in
+    code (NativeTabs -> nativetab + native, tab)."""
+    out = []
+    for line in body.splitlines():
+        st = line.strip()
+        if st.startswith("#"):
+            out.extend(tokens(st.lstrip("#")))
+    idents = set()
+    for span in _SPAN.findall(body):
+        idents.update(_CAMEL.findall(span))
+    idents.update(_JSX.findall(body))
+    for ident in sorted(idents):
+        ident = ident.split(".")[-1]
+        out.extend(tokens(ident))
+        out.extend(tokens(split_camel(ident)))
+    seen, res = set(), []
+    for t in out:
+        if t not in seen and not t.isdigit():
+            seen.add(t)
+            res.append(t)
+    return res[:limit]
 
 
 def bigrams(toks):

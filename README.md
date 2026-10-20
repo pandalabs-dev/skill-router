@@ -23,14 +23,15 @@ Uninstall deletes the plugin's data directory (index and session state) unless y
 ## Token budget
 
 - Silent by default: a hint appears only on a confident match. On the bundled everyday sample it fires on 25% of prompts.
-- One line of at most 400 characters and at most 5 names. Extra names must score at least half of the top hit, so most hints carry 1 to 2 names. Only the first two names may carry a short description, and only when the name shares no word with the prompt.
+- One line of at most 400 characters and at most 5 names. An extra name must score at least half of the top hit, add evidence of its own, and, if it belongs to another topic category, find that category's words in the prompt. At most one name per skill family and one per artifact group (PowerPoint vs HTML slides vs Figma Slides). Hints average 1.1 names. Only the first two names may carry a short description, and only when the name shares no word with the prompt.
 - Each skill is suggested once per session, and never after the transcript shows it was already used.
 - The `SessionStart` hook only rebuilds a stale index and prints nothing.
 
 ## How matching works
 
 - A BM25 index over every skill description. It covers user skills, enabled plugins, synced plugins and project `.claude/skills`, plus a static list of built-in skills (`builtin_skills.json`) that may drift from what your build offers.
-- Name and trigger-phrase hits, bigrams and a small alias table (`k8s`, `tf`, `gh actions`, `pg`, `tdd`, ...) boost a skill. A rare tech word at the start of a skill's name beats generic skills (`postgres-pro` over `migration`).
+- Name and trigger-phrase hits, bigrams and a small alias table (`k8s`, `tf`, `gh actions`, `pg`, `tdd`, ...) boost a skill. A rare tech word at the start of a skill's name beats generic skills (`postgres-pro` over `migration`). Capitalized product nouns in a description (Blob, Edge Config) count once the platform is named. Word, Excel, PowerPoint and PDF requests go to the matching format skill. SKILL.md headings and CamelCase API names (`NativeTabs`) add a small, capped weight.
+- In "migrate X to Y", Y counts more than X, and a skill named after X is not the match.
 - What follows `into`/`to`/`as` sets the direction: a code target (Next.js, React, HTML, SwiftUI, component, page) means design to code, and Figma/FigJam means code to design. A screenshot, mockup or image turned into code goes to `image-to-code`; naming Figma routes to the Figma skills instead. "NOT for:" clauses in descriptions count against a skill.
 - Platform skills (`vercel:*`, `expo-*`/`eas-*`, `figma:*`, `higgsfield-*`, `shopify-expert`) and language skills (`python-pro`, `typescript-pro`, `golang-pro`, ...) stay quiet unless the prompt or the project shows that platform or language. If the prompt names a different language from the project, they stay quiet. Style families such as `caveman-*` fire only when the prompt names them. Uppercase `EXPLAIN`, "query plan" and "seq scan" signal query performance; a lowercase "explain this" does not.
 - Prompts under 4 meaningful words fire only on a rare, specific hit. Continuations ("ok", "go on", "do it") never fire.
@@ -44,6 +45,8 @@ Optional `config.json` in the data directory (`~/.claude/plugins/data/skill-rout
 ```
 
 `opt_in_families` adds to the default `caveman` family: `"name"` mutes `name*` skills unless the prompt says `name`. A dict form `{"name": {"skills": [...], "words": [...]}}` is also accepted. `builtins` takes `"auto"`, `true` or `false`. With `"auto"`, the anthropic-skills entries are indexed only when you are logged in with a claude.ai account.
+
+Every skill gets a rule-based topic category (`routes.json`). `python3 scripts/build_index.py --list` prints skills grouped by category. It is for humans only and never runs from a hook.
 
 ## Tests
 

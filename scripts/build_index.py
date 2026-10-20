@@ -160,7 +160,7 @@ _USE_WHEN = re.compile(r"(?:use (?:this skill )?when|use for|invoke for)\s+([^.\
 
 
 def extract(entry):
-    text = srlib.read_head(entry["path"])
+    text = srlib.read_head(entry["path"], 60000)
     fm = srlib.parse_frontmatter(text)
     if str(fm.get("disable-model-invocation", "")).lower() == "true":
         return None
@@ -175,7 +175,10 @@ def extract(entry):
                 break
     if not desc:
         return None
-    return from_description(entry, desc)
+    s = from_description(entry, desc)
+    body = text.split("---", 2)[-1] if text.startswith("---") else text
+    s["body"] = sorted(set(srlib.body_terms(body)) - set(s["tf"]) - set(s["name_toks"]))
+    return s
 
 
 def from_description(entry, desc):
@@ -218,11 +221,27 @@ def from_description(entry, desc):
         "dir": srlib.directional(pos),
         "conv": srlib.name_conversion(base),
         "neg": sorted(neg_toks),
+        "products": products(pos),
+        "body": [],
+        "formats": [],
         "tf": tf,
         "dl": len(desc_toks),
         "platform": None,
         "dup_of": None,
     }
+
+
+_PRODUCT = re.compile(r"(?<=[\w,;(/\u2014-] )([A-Z][A-Za-z0-9]+(?: [A-Z][A-Za-z0-9]+)?)")
+
+
+def products(desc):
+    """Capitalized product nouns mid-sentence (Blob, Edge Config, Queues, NativeTabs)."""
+    out = set()
+    for m in _PRODUCT.findall(desc):
+        ph = srlib.norm_phrase(m)
+        if ph and ph not in srlib.WEAK and len(ph) >= 2:
+            out.add(ph)
+    return sorted(out)
 
 
 # ------------------------------------------------------------ builtins
@@ -248,8 +267,37 @@ def builtin_entries(mode="auto"):
             continue
         for item in group.get("skills", []):
             if item.get("name") and item.get("description"):
-                out.append((item["name"], item["description"]))
+                out.append((item["name"], item["description"], item.get("formats") or []))
     return out
+
+
+def tag_categories(skills):
+    """Rule-based topic category per skill (routes.json 'categories', first match wins):
+    name/family/platform patterns first, then description keywords."""
+    routes = load_json(os.path.join(ROOT, "routes.json"), {}) or {}
+    cats = routes.get("categories") or []
+    for s in skills:
+        s["category"] = None
+        for c in cats:
+            if any(fnmatch.fnmatchcase(s["name"], pat) or fnmatch.fnmatchcase(s["base"], pat)
+                   for pat in c.get("skills", [])):
+                s["category"] = c["name"]
+                break
+        if s["category"]:
+            continue
+        best, best_n = None, 0
+        toks = set(s["tf"]) | set(s["name_toks"])
+        for c in cats:
+            n = len(toks & set(srlib.tokens(" ".join(c.get("intent", [])))))
+            if n > best_n:
+                best, best_n = c["name"], n
+        s["category"] = best or "other"
+
+
+def category_intents():
+    routes = load_json(os.path.join(ROOT, "routes.json"), {}) or {}
+    return {c["name"]: sorted(set(srlib.norm_phrase(w) for w in c.get("intent", []) if srlib.norm_phrase(w)))
+            for c in routes.get("categories") or []}
 
 
 def tag_platforms(skills):
@@ -317,12 +365,18 @@ def build(out_dir=None):
     skills = [s for s in (extract(e) for e in discover()) if s]
     cfg = load_json(os.path.join(out_dir, "config.json"), {}) or {}
     have = {s["name"] for s in skills} | {s["base"] for s in skills}
-    for name, desc in builtin_entries(cfg.get("builtins", "auto") if isinstance(cfg, dict) else "auto"):
+    for name, desc, fmts in builtin_entries(cfg.get("builtins", "auto") if isinstance(cfg, dict) else "auto"):
         if name not in have and name.split(":", 1)[-1] not in have:
-            skills.append(from_description({"name": name, "path": "builtin", "source": "builtin",
-                                            "plugin": name.split(":", 1)[0] if ":" in name else None}, desc))
+            b = from_description({"name": name, "path": "builtin", "source": "builtin",
+                                  "plugin": name.split(":", 1)[0] if ":" in name else None}, desc)
+            b["formats"] = list(fmts)
+            skills.append(b)
+    for s in skills:
+        if not s["formats"] and s["base"] in ("pdf", "docx", "xlsx", "pptx"):
+            s["formats"] = [s["base"]]
     mark_duplicates(skills)
     tag_platforms(skills)
+    tag_categories(skills)
     # family prefix: first name token shared by >= 3 skills (seo-*, caveman-*, expo-* ...)
     firsts = {}
     for s in skills:
@@ -339,6 +393,10 @@ def build(out_dir=None):
             df[t] = df.get(t, 0) + 1
         for d in s["dir"]:
             df[d] = df.get(d, 0) + 1
+    bdf = {}
+    for s in skills:
+        for t in s.get("body", ()):
+            bdf[t] = bdf.get(t, 0) + 1
     n = len(skills)
     avgdl = sum(s["dl"] for s in skills) / float(n or 1)
     idx = {
@@ -348,6 +406,8 @@ def build(out_dir=None):
         "N": n,
         "avgdl": avgdl,
         "idf": {t: round(math.log(1 + (n - c + 0.5) / (c + 0.5)), 4) for t, c in df.items()},
+        "bidf": {t: round(math.log(1 + (n - c + 0.5) / (c + 0.5)), 4) for t, c in bdf.items()},
+        "cat_intents": category_intents(),
         "skills": skills,
     }
     os.makedirs(out_dir, exist_ok=True)
@@ -369,6 +429,19 @@ def is_stale(out_dir=None):
 
 def main(argv):
     try:
+        if "--list" in argv:
+            path = os.path.join(srlib.data_dir(), "index.json")
+            idx = load_json(path) if not is_stale() else None
+            if not idx:
+                _, idx = build()
+            groups = {}
+            for sk in idx["skills"]:
+                if not sk.get("dup_of"):
+                    groups.setdefault(sk.get("category") or "other", []).append(sk["name"])
+            for cat in sorted(groups, key=lambda c: (-len(groups[c]), c)):
+                print("%s (%d)" % (cat, len(groups[cat])))
+                print("  " + ", ".join(sorted(groups[cat])))
+            return 0
         if "--if-stale" in argv:
             if is_stale():
                 build()

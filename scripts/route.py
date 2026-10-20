@@ -42,8 +42,14 @@ SPECIALISATION_PENALTY = 0.6   # domain-named skill, domain absent from prompt a
 PLATFORM_PENALTY = 0.5         # platform skill (vercel:*, expo-*, figma:*) without platform evidence
 NEGATIVE_PENALTY = 0.45        # prompt hits the skill's "NOT for:" clause
 CLASS_WEIGHT = 4.0             # weight of a matching conversion class (@code / @design / @visual)
+DEST_WEIGHT = 1.5              # 'migrate X to Y': Y terms
+SOURCE_WEIGHT = 0.6            # 'migrate X to Y': X terms
+BODY_WEIGHT = 0.35             # SKILL.md headings / API names, well below description terms
+BODY_CAP = 2.5                 # total body contribution per skill
+FORMAT_BONUS = 12.0            # prompt names the file format a skill produces (Word, Excel, PDF, PowerPoint)
 WRONG_DIRECTION_PENALTY = 0.6  # e.g. prompt goes code->Figma, skill goes Figma->code
 VERY_RARE_IDF = 99.0  # disabled: common English words are rare in descriptions too
+IDENTITY_WINDOW = 0.85         # near-tie window in which exact identity hits are preferred
 FIELD_RATIO = 0.9              # first pick must be within 90% of the best raw score (else ambiguous)
 STATE_TTL = 3 * 24 * 3600
 
@@ -55,6 +61,9 @@ CONTINUATION = re.compile(
     re.I)
 FILLER = set("a an the to of in on at for with and or but is are be it this that these those i me my "
              "you your we our pls please just now then so ok okay yes no".split())
+CONVERSION_VERBS = set(srlib.stem(w) for w in (
+    "convert turn translate port migrate export push import move rewrite transform implement "
+    "recreate rebuild replicate switch upgrade code".split()))
 BUILD_INTENT = set(srlib.stem(w) for w in (
     "add build create implement fix debug setup set configure scaffold migrate wire integrate "
     "screen route endpoint component page deploy upgrade install refactor broken error crash fails "
@@ -228,8 +237,26 @@ class Query(object):
         self.phrase = " " + " ".join(self.toks) + " "
         self.bigrams = srlib.bigrams(self.toks)
         self.dir = srlib.directional(prompt)
+        self.conversion = bool(CONVERSION_VERBS & set(self.toks))
+        if not self.conversion:
+            # 'add a toggle to the settings page' is not a conversion: keep plain
+            # direction features, drop conversion classes and source/target weighting
+            self.dir = dict((k, v) for k, v in self.dir.items() if "@" not in k)
         if "to:@code" in self.dir and "code" not in self.set:
             self.exp.add("code")
+        self.formats = srlib.format_intents(prompt)
+        # migration/conversion: what you move TO matters more than what you move FROM
+        if self.conversion:
+            self.to_toks = set(d[3:] for d in self.dir if d.startswith("to:") and "@" not in d)
+            self.from_toks = set(d[5:] for d in self.dir if d.startswith("from:") and "@" not in d) - self.to_toks
+            # parts of a source compound ('react', 'native' of 'react-native') are source too
+            self.from_toks |= set(t for t in self.parts if any(t in f and t != f for f in self.from_toks))
+            self.from_toks -= self.to_toks
+        else:
+            self.to_toks = self.from_toks = set()
+        xphrase = self.phrase + " ".join(sorted(self.exp)) + " "
+        self.cats = set(c for c, words in (idx.get("cat_intents") or {}).items()
+                        if any((" %s " % w) in xphrase for w in words))
         idf = idx["idf"]
         # rare = specific vocabulary (few skills mention it)
         self.rare = set(t for t in self.set if t not in srlib.WEAK and idf.get(t, 0) >= 3.2)
@@ -244,7 +271,16 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
     norm = K1 * (1 - B + B * dl / avgdl)
     name_toks = s["name_toks"]
     rare_name = False
+    body = s.get("body") or ()
+    bidf = idx.get("bidf") or {}
+    body_hit = set()
     for t, weight in [(t, 0.4 if t in q.parts else 1.0) for t in q.set] + [(t, 0.5) for t in q.exp]:
+        if t in q.to_toks:
+            weight *= DEST_WEIGHT
+        elif t in q.from_toks:
+            weight *= SOURCE_WEIGHT
+        elif q.conversion and t in CONVERSION_VERBS:
+            weight *= 0.4   # 'migrate'/'convert' says a conversion happens, not what it is about
         w = idf.get(t, 2.0) * weight
         if w >= VERY_RARE_IDF:
             w *= 1.5   # a term only one or two skills mention is a strong discriminator
@@ -265,8 +301,13 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
             if t in q.rare and len(s["kw"]) <= 30:
                 score += 0.8 * w   # rare word from a short, explicit trigger list
             hitf = True
+        if not hitf and t in body and t not in srlib.WEAK:
+            body_hit.add(t)
         if hitf:
             matched.add(t)
+    if body_hit:
+        # SKILL.md headings / API names: low weight, capped, never dominant
+        score += min(BODY_CAP, sum(BODY_WEIGHT * bidf.get(t, 2.0) for t in body_hit))
     name_hit = multi_hit = False
     np_ = s.get("name_phrase") or ""
     if np_ and (" %s " % np_) in q.phrase:
@@ -281,8 +322,28 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
         score += 6.0
         name_hit = multi_hit = "-" in s["base"]
         name_hit = True
-    ph_hits = sum(1 for ph in s["phrases"] if (" %s " % ph) in q.phrase)
+    if not name_hit and len(name_toks) >= 2 and all(t in q.set for t in name_toks):
+        score += 6.0   # every word of the skill's name is in the prompt, just not adjacent
+        name_hit = True
+    ph_hits = sum(1 for ph in s["phrases"] if (" %s " % ph) in q.phrase
+                  and not (q.from_toks and set(ph.split()) <= q.from_toks))   # source-side phrases don't count
     score += min(ph_hits, 3) * 3.0
+    plat = s.get("platform")
+    plat_ok = plat is None or plat in platforms
+    if plat and plat_ok:
+        # product nouns from the description (Blob, Edge Config, Queues) once the platform is named
+        generic = srlib.WEAK | set(srlib.tokens(" ".join(filter(None, (s.get("plugin"), plat, s.get("family"))))))
+        for ph in s.get("products", ()):
+            if set(ph.split()) <= generic:
+                continue   # 'Figma Design' is the platform plus a generic word, not a product
+            if (" %s " % ph) in q.phrase and (" " in ph or idf.get(ph, 0) >= 3.0):
+                score += 2.2 * idf.get(ph.split()[0], 3.0)
+                matched.update(ph.split())
+                rare_name = True
+                break
+    if q.formats and q.formats.intersection(s.get("formats", ())):
+        score += FORMAT_BONUS   # the prompt asks for exactly this file format
+        rare_name = True
     bg = len(q.bigrams.intersection(s.get("bigrams", ())))
     score += min(bg, 2) * 2.0
     # direction: 'page into Figma' vs 'Figma into code'
@@ -319,8 +380,6 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
     if dir_ev:
         evidence += 1
     sig = signals.get(s["name"]) or signals.get(s["base"])
-    plat = s.get("platform")
-    plat_ok = plat is None or plat in platforms
     distinct = [t for t in name_toks if t not in srlib.WEAK and t not in srlib.NAME_GENERIC]
     qall = q.set | q.exp
     fam = s.get("family")
@@ -329,7 +388,8 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
         # seo-HREFLANG) must show up; the shared family/plugin word does not count
         shared = {fam, s.get("plugin"), plat}
         core = [t for t in distinct if t not in shared]
-        if core and not (set(core) & qall):
+        # in 'migrate X to Y' a skill named after X (the thing being left) is not the match
+        if core and not (set(core) & (qall - q.from_toks)):
             score *= SPECIALISATION_PENALTY
         elif fam and fam not in qall and not (plat and plat_ok):
             score *= SPECIALISATION_PENALTY   # seo-*, caveman-* ... family word absent
@@ -347,11 +407,11 @@ def score_skill(q, s, idx, signals, platforms, build_intent):
         elif build_intent and matched:
             score += 2.5 * sig
     rare_hit = bool(q.rare & matched) or name_hit
-    return score, evidence, name_hit or ph_hits > 0 or rare_name, rare_hit, sorted(matched), (gated, wrong_dir)
+    return score, evidence, name_hit or ph_hits > 0 or rare_name, rare_hit, sorted(matched), (gated, wrong_dir, name_hit or rare_name)
 
 
-def score_all(prompt, idx, signals, extra_skills=(), platforms=frozenset(), muted=frozenset()):
-    q = Query(prompt, idx)
+def score_all(prompt, idx, signals, extra_skills=(), platforms=frozenset(), muted=frozenset(), q=None):
+    q = q or Query(prompt, idx)
     build_intent = bool(q.set & BUILD_INTENT)
     results = []
     for s in list(idx["skills"]) + list(extra_skills):
@@ -364,7 +424,7 @@ def score_all(prompt, idx, signals, extra_skills=(), platforms=frozenset(), mute
     return results
 
 
-def pick(results, cfg, skip_names, short=False):
+def pick(results, cfg, skip_names, short=False, q=None):
     """Confident picks only; silence is the default outcome.
 
     First pick: score >= min_score, enough specific evidence, and within
@@ -374,8 +434,14 @@ def pick(results, cfg, skip_names, short=False):
     chosen = []
     first_matched = set()
     blockers = []   # higher-scoring candidates that were not confident
+    # identity beats description: among near-tied leaders, an exact name/phrase/format hit goes first
+    if results:
+        top_score = results[0][0]
+        lead = [r for r in results if r[0] >= IDENTITY_WINDOW * top_score]
+        rest = results[len(lead):]
+        results = sorted(lead, key=lambda r: (not r[6][2], -r[0])) + rest
     min_score = cfg["min_score"] * (1.3 if short else 1.0)
-    for score, s, evidence, exact, matched, rare_hit, (gated, wrong_dir) in results:
+    for score, s, evidence, exact, matched, rare_hit, (gated, wrong_dir, _ident) in results:
         name = s["dup_of"] or s["name"]
         if name in skip_names or s["name"] in skip_names or name in cfg["exclude"] or s["name"] in cfg["exclude"]:
             continue
@@ -388,7 +454,7 @@ def pick(results, cfg, skip_names, short=False):
             if short:
                 ok = ok and rare_hit
             # ambiguity: an unrelated, higher-scoring but unconfident candidate means silence
-            if ok and any(b[0] * FIELD_RATIO > score and group(b[1]) != group(s) for b in blockers):
+            if ok and not exact and any(b[0] * FIELD_RATIO > score and group(b[1]) != group(s) for b in blockers):
                 ok = False
             if ok:
                 chosen.append((score, name, s))
@@ -403,11 +469,41 @@ def pick(results, cfg, skip_names, short=False):
         # an extra name must be confident, point the same way, and match something
         # the first pick did not (siblings matching the same words add nothing)
         if ((evidence >= 2 or exact) and score >= 0.6 * cfg["min_score"] and not wrong_dir
-                and not set(matched) <= first_matched):
+                and not set(matched) <= first_matched and extra_allowed(s, matched, chosen, first_matched, q)):
             chosen.append((score, name, s))
         if len(chosen) >= cfg["top_k"]:
             break
     return chosen
+
+
+ALTERNATIVES = []
+
+
+def extra_allowed(s, matched, chosen, first_matched, q):
+    """Gates for a 2nd..5th name.
+    - category intent: an extra from another topic category than the top hit needs that
+      category's own words in the prompt (seo-images needs seo/ranking/meta/sitemap/alt text);
+    - one name per family: a sibling of a chosen skill needs evidence of its own, i.e. a
+      specific word tied to its identity (name, trigger keywords) that the top hit lacks;
+    - a named file format admits only skills that produce that format."""
+    top = chosen[0][2]
+    cats = q.cats if q is not None else set()
+    src = q.from_toks if q is not None else set()
+    names = set(c[1] for c in chosen) | set(c[2]["name"] for c in chosen)
+    for alt in ALTERNATIVES:
+        if (s["name"] in alt or (s.get("dup_of") or "") in alt) and names & alt:
+            return False   # same artifact, the better-scoring alternative is already in
+    if set(matched) - src <= first_matched:
+        return False
+    if s.get("category") and top.get("category") and s["category"] != top["category"] and s["category"] not in cats:
+        return False
+    if any(group(c[2]) == group(s) for c in chosen):
+        own = (set(matched) - first_matched - src) & (set(s["name_toks"]) | set(s.get("kw", ())))
+        if not [t for t in own if t not in srlib.WEAK]:
+            return False
+    if q is not None and q.formats and s.get("category") == "office-docs" and not q.formats.intersection(s.get("formats", ())):
+        return False
+    return True
 
 
 def group(s):
@@ -521,6 +617,7 @@ def run(payload, ddir=None, persist=True):
     idx = load_index(ddir)
     cwd = payload.get("cwd") or ""
     routes = load_json(os.path.join(os.path.dirname(HERE), "routes.json"), {}) or {}
+    ALTERNATIVES[:] = [set(a) for a in routes.get("alternatives", [])]
     signals, project_plats = project_signals(cwd, routes)
     rprompt = srlib.rewrite(prompt)
     qraw = set(srlib.raw_tokens(rprompt))
@@ -535,8 +632,9 @@ def run(payload, ddir=None, persist=True):
     if persist:
         scan_transcript(payload.get("transcript_path"), state)
     skip = set(state.get("suggested", [])) | set(state.get("used", []))
-    results = score_all(prompt, idx, signals, extra, platforms, muted)
-    chosen = pick(results, cfg, skip, short=prompt_size(prompt) < 4)
+    q = Query(prompt, idx)
+    results = score_all(prompt, idx, signals, extra, platforms, muted, q)
+    chosen = pick(results, cfg, skip, short=prompt_size(prompt) < 4, q=q)
     if cfg.get("debug"):
         sys.stderr.write("skill-router top: %s\n" % [(round(r[0], 1), r[1]["name"], r[2], r[4]) for r in results[:6]])
     text = None
